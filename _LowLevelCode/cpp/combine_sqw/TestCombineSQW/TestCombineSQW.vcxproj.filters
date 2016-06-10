@@ -18,10 +18,22 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="test_header.h">
+    <ClInclude Include="..\combine_sqw.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\combine_sqw.h">
+    <ClInclude Include="..\cells_in_memory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\exchange_buffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\fileParameters.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sqw_pix_writer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sqw_reader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -35,9 +47,27 @@
     <ClCompile Include="TestCombineSQW.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\cells_in_memory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\exchange_buffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\fileParameters.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sqw_pix_writer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sqw_reader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="TestCombineSQW.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="test_header.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
   </ItemGroup>
