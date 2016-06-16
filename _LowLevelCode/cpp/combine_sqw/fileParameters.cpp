@@ -11,7 +11,9 @@ const std::map<std::string, int> fileParameters::fileParamNames = {
 //--------------------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------------
 /* Convert input Matlab structure with the fields, necessary to describe input & output sqw file into
-fileParameters class*/
+ * fileParameters class.
+ @input -- pointer to Matlab structure, containing the file description, with fields defined in the map above.
+*/
 fileParameters::fileParameters(const mxArray *pFileParam) {
 
     mwSize total_num_of_elements = mxGetNumberOfElements(pFileParam);
@@ -52,7 +54,7 @@ fileParameters::fileParameters(const mxArray *pFileParam) {
         }
         case(2): {
             double *pPixStart = mxGetPr(pFieldCont);
-            pix_start_pos = long(pPixStart[0]);
+            pix_start_pos = uint64_t(pPixStart[0]);
             break;
         }
         case(3): {

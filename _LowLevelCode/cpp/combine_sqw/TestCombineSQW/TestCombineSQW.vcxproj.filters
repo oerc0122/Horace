@@ -21,9 +21,6 @@
     <ClInclude Include="..\combine_sqw.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\cells_in_memory.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\exchange_buffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -36,18 +33,18 @@
     <ClInclude Include="..\sqw_reader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\nsqw_pix_reader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\pix_mem_map.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="test_header.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\combine_sqw.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="TestCombineSQW.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\cells_in_memory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\exchange_buffer.cpp">
@@ -59,7 +56,7 @@
     <ClCompile Include="..\sqw_pix_writer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\sqw_reader.cpp">
+    <ClCompile Include="..\pix_mem_map.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

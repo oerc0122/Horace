@@ -1,4 +1,13 @@
+#include "../../build_all/CommonCode.h"
+
 #include "combine_sqw.h"
+#include "nsqw_pix_reader.h"
+#include "sqw_pix_writer.h"
+
+#include <memory>
+#include <stdio.h>
+
+
 #include <algorithm>
 #include <numeric>
 #include <iomanip>
@@ -16,98 +25,41 @@ enum OutputArguments { // unique output arguments,
   pix_info,
   N_OUTPUT_Arguments
 };
+/*
+% Mex routine used to combine multiple sqw files with common grid into the single one.
+%
+% the routine accepts three arguments namely:
+% 
+% 1) inFileParams -- cellarray of the structures, which define input files and information necessary to
+%                    read their pixels. The structure is processed by fileParameters class.
+% The structure has the following fields:
+    "file_name"         -- name of the file to process
+    "npix_start_pos"    -- the location of the beginning of the npix data in the binary file 
+                           (output of ftellg(fid) or of fseek(fid, npix_start_pos)
+    "pix_start_pos"     -- the location of the beginning of the pix data in the binary file. Similar to npix
+    "file_id"           -- number of pixel (pixel ID) distinguishing the pixels, obtained from this run from
+                           all other pixels in combined sqw file.
+    "nbins_total"       -- number of bins in 
+%
+% 2) outFileParams -- structure, which defines the parameters for the pixels to write.
+    The structure is similar to the one used for inFileParams but some fields are undefined.
+% 
+% 3) programSettings -- array of parameters defining the file combine process, namely:
+% n_bin        -- number of bins in the image array
+% 1            --first bin to start copy pixels for
+% out_buf_size -- the size of output buffer to use for writing pixels
+% change_fileno-- if pixel run id should be changed
+% relabel_with_fnum-- if change_fileno is true (1), how to calculate the new pixel
+%                     id -- by providing new id equal to filenum (1) or by adding
+%                     it to the existing num (0)
+% num_ticks    -- approximate number of log messages to generate while
+%                 combining files together
+% buf size     -- buffer size -- the size of buffer used for each input file
+%                 read operations
+% multithreaded_combining - number, which define if to use multiple threads to read files and if yes, which subalgorithm to deploy
+*/
 
 
-//--------------------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------------------
-//
-void pix_reader::run_read_job() {
-  int log_level = param.log_level;
-
-
-  size_t start_bin = param.nBin2read;
-  size_t n_pixels_processed(0);
-
-  //
-  size_t n_bins_total = param.totNumBins;
-  //
-  //
-  while (start_bin < n_bins_total && !Buff.is_interrupted()) {
-    size_t n_buf_pixels(0);
-    this->read_pix_info(n_buf_pixels, start_bin);
-
-    //pixWriter.write_pixels(Buff);
-    //new start bin is by one shifted wrt the last bin read
-    start_bin++;
-    //
-    n_pixels_processed += n_buf_pixels;
-  }
-  Buff.set_write_allowed();
-}
-//
-void pix_reader::read_pix_info(size_t &n_buf_pixels, size_t &n_bins_processed, uint64_t *nBinBuffer) {
-
-  n_buf_pixels = 0;
-  size_t first_bin = n_bins_processed;
-
-
-  size_t n_files = this->fileReaders.size();
-  const size_t nBinsTotal(this->param.totNumBins);
-  size_t n_tot_bins(0);
-  size_t npix, pix_start_num;
-  //
-  bool common_position(false);
-  if (n_files == 1) {
-    common_position = true;
-  }
-
-  float * pPixBuffer = Buff.get_read_buffer();
-  size_t pix_buffer_size = Buff.pix_buf_size();
-  size_t ii(0);
-
-  for (size_t n_bin = first_bin; n_bin < nBinsTotal; n_bin++) {
-    size_t cell_pix = 0;
-
-    for (size_t i = 0; i < n_files; i++) {
-      fileReaders[i].get_npix_for_bin(n_bin, pix_start_num, npix);
-      cell_pix += npix;
-    }
-
-    n_bins_processed = n_bin;
-    if (nBinBuffer) {
-      nBinBuffer[n_bin] = cell_pix;
-    }
-
-    if (cell_pix == 0)continue;
-
-    if (cell_pix + n_buf_pixels > pix_buffer_size) {
-      if (n_bins_processed == 0) {
-        if (n_buf_pixels == 0) {
-          pPixBuffer = Buff.get_read_buffer(cell_pix);
-          pix_buffer_size = Buff.pix_buf_size();
-        }
-        else {
-          Buff.set_interrupted("==>output pixels buffer is to small to accommodate single bin. Increase the size of output pixels buffer");
-          break;
-        }
-      }
-      else {
-        n_bins_processed--;
-        break;
-      }
-    }
-
-
-    for (size_t i = 0; i < n_files; i++) {
-      fileReaders[i].get_pix_for_bin(n_bin, pPixBuffer, n_buf_pixels,
-        pix_start_num, npix, common_position);
-      n_buf_pixels += npix;
-    }
-  }
-  // unlocks read buffer too
-  Buff.set_and_lock_write_buffer(n_buf_pixels, n_bins_processed + 1);
-}
 //--------------------------------------------------------------------------------------------------------------------
 //--------- MAIN COMBINE JOB -----------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------------
@@ -116,7 +68,7 @@ void combine_sqw(ProgParameters &param, std::vector<sqw_reader> &fileReaders, co
 
   exchange_buffer Buff(param.pixBufferSize, param.totNumBins, param.num_log_ticks);
 
-  pix_reader Reader(param, fileReaders, Buff);
+  nsqw_pix_reader Reader(param, fileReaders, Buff);
 
   sqw_pix_writer pixWriter(Buff);
   pixWriter.init(outPar, param.totNumBins);
@@ -143,7 +95,7 @@ void combine_sqw(ProgParameters &param, std::vector<sqw_reader> &fileReaders, co
     //count++;
     
     Buff.logging_ready.wait_for(l, std::chrono::milliseconds(c_sensitivity), [&Buff]() {return Buff.do_logging; });
-    //mexPrintf("%s","before BUF Do logging in\n");          
+    //mexPrintf("%s","before BUF Do logging in\n");
     //mexEvalString("pause(.002);");    
     if (Buff.do_logging) {
       if (interrupted) {
@@ -152,7 +104,7 @@ void combine_sqw(ProgParameters &param, std::vector<sqw_reader> &fileReaders, co
       }
       Buff.print_log_meassage(log_level);
     }
-    //mexPrintf("%s","after BUF Do logging in\n");          
+    //mexPrintf("%s","after BUF Do logging in\n");
     //mexEvalString("pause(.002);");    
     
     if (utIsInterruptPending()) {
@@ -322,7 +274,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     uint64_t *nbinBuf = (uint64_t *)mxGetPr(nbin_Buffer);
 
     exchange_buffer Buffer(ProgSettings.pixBufferSize, ProgSettings.totNumBins, ProgSettings.num_log_ticks);
-    pix_reader Reader(ProgSettings, fileReader, Buffer);
+    nsqw_pix_reader Reader(ProgSettings, fileReader, Buffer);
 
 
     n_bins_processed = ProgSettings.nBin2read;

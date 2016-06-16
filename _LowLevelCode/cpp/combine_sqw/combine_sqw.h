@@ -1,13 +1,6 @@
 #ifndef H_COMBINE_SQW
 #define H_COMBINE_SQW
 
-#include "../../build_all/CommonCode.h"
-#include "sqw_reader.h"
-#include "sqw_pix_writer.h"
-#include <memory>
-
-#include <stdio.h>
-
 
 //#define STDIO
 
@@ -33,30 +26,6 @@ struct ProgParameters {
 enum readBinInfoOption {
     sumPixInfo,
     keepPixInfo
-};
-
-
-
-
-//-----------------------------------------------------------------------------------------------------------------
-/* Structure (class) supporting the read operations for range of input files and combining the information 
-from this files together in the file buffer*/
-struct pix_reader {
-    ProgParameters &param;
-    std::vector<sqw_reader> &fileReaders;
-    exchange_buffer &Buff;
-
-    pix_reader(ProgParameters &prog_par, std::vector<sqw_reader> &tmpReaders, exchange_buffer &buf) :
-        param(prog_par), fileReaders(tmpReaders), Buff(buf)
-    { }
-    // satisfy thread interface
-    void operator()() {
-        this->run_read_job();
-    }
-
-    //
-    void run_read_job();
-    void read_pix_info(size_t &n_buf_pixels, size_t &n_bins_processed, uint64_t *nBinBuffer = NULL);
 };
 
 

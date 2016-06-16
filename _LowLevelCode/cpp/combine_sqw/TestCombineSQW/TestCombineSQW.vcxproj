@@ -171,12 +171,10 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\cells_in_memory.cpp" />
-    <ClCompile Include="..\combine_sqw.cpp" />
+    <ClCompile Include="..\pix_mem_map.cpp" />
     <ClCompile Include="..\exchange_buffer.cpp" />
     <ClCompile Include="..\fileParameters.cpp" />
     <ClCompile Include="..\sqw_pix_writer.cpp" />
-    <ClCompile Include="..\sqw_reader.cpp" />
     <ClCompile Include="TestCombineSQW.cpp" />
     <ClCompile Include="test_header.cpp" />
   </ItemGroup>
@@ -191,10 +189,11 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\cells_in_memory.h" />
+    <ClInclude Include="..\pix_mem_map.h" />
     <ClInclude Include="..\combine_sqw.h" />
     <ClInclude Include="..\exchange_buffer.h" />
     <ClInclude Include="..\fileParameters.h" />
+    <ClInclude Include="..\nsqw_pix_reader.h" />
     <ClInclude Include="..\sqw_pix_writer.h" />
     <ClInclude Include="..\sqw_reader.h" />
   </ItemGroup>

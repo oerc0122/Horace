@@ -4,7 +4,7 @@
 //-----------  SQW READER (FOR SINGLE SQW FILE)  ---------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------------
 sqw_reader::sqw_reader(size_t working_buf_size) :
-    cells_in_memory(working_buf_size),
+    pix_mem_map(working_buf_size),
     npix_in_buf_start(0), buf_pix_end(0),
     PIX_BUF_SIZE(working_buf_size), change_fileno(false), fileno(true),
     use_multithreading_pix(true), pix_read(false), pix_read_job_completed(false), n_first_buf_pix(0)
@@ -61,7 +61,7 @@ void sqw_reader::init(const fileParameters &fpar, bool changefileno, bool fileno
             ", 2 (debug mode, only bin thread used for reading ) or 3 (debug mode , use pix read thread, and disable bin reading)");
     }
 
-    cells_in_memory::init(fpar.fileName, fpar.nbin_start_pos, fpar.total_NfileBins, working_buf_size, bin_multithreading);
+    pix_mem_map::init(fpar.fileName, fpar.nbin_start_pos, fpar.total_NfileBins, working_buf_size, bin_multithreading);
 #ifdef STDIO
     h_data_file_pix = fopen(full_file_name.c_str(), "rb");
     bin_buffer.fpos = ftell(h_data_file_pix);

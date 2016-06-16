@@ -1,7 +1,7 @@
 #ifndef H_SQW_PIX_WRITER
 #define H_SQW_PIX_WRITER
 
-#include "cells_in_memory.h"
+//#include "pix_mem_map.h"
 #include "fileParameters.h"
 #include "exchange_buffer.h"
 

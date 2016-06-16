@@ -404,32 +404,32 @@ for i=1:nfiles
         'npix_start_pos',npixstart(i),'pix_start_pos',pixstart(i),'file_id',file_id);
 end
 
-out_param = struct('file_name',fout_name ,...
+out_file_param = struct('file_name',fout_name ,...
     'npix_start_pos',NaN,'pix_start_pos',pix_out_position,'file_id',NaN);
 
 [out_buf_size,log_level,buf_size,multithreaded_combining] = get(hor_config,'mem_chunk_size','log_level',...
     'mex_combine_buffer_size','mex_combine_thread_mode');
 
-% conversion parameters include:
+% conversion parameters include :
 % n_bin        -- number of bins in the image array
-% 1            -- first bin to start copty pixels for
-% out_buf_size -- the size of ouput buffer to use for writing pixels
+% 1            --first bin to start copy pixels for
+% out_buf_size -- the size of output buffer to use for writing pixels
 % change_fileno-- if pixel run id should be changed
-% relabel_with_fnum -- if change_fileno is true, how to calculate the new pixel
-%                  id -- by providing new id equal to filenum or by adding 
+% relabel_with_fnum-- if change_fileno is true, how to calculate the new pixel
+%                  id -- by providing new id equal to filenum or by adding
 %                  it to the existing num.
 % num_ticks    -- approximate number of log messages to generate while
 %                 combining files together
-% buf size     -- bufer size -- the size of bufer used for each input file
+% buf size     -- buffer size -- the size of buffer used for each input file
 %                 read operations
-% multithreaded_combining - use multiple threads to read files
+% multithreaded_combining - number, which define if to use multiple threads to read files and if yes, which way
 program_param = [n_bin,1,out_buf_size,log_level,change_fileno,relabel_with_fnum,100,buf_size,multithreaded_combining];
 t_start=tic;
 try
     if log_level>1
         fprintf(' Combining Task started at  %4d/%02d/%02d %02d:%02d:%02d\n',fix(clock));
     end
-    combine_sqw(in_params,out_param ,program_param);
+    combine_sqw(in_params,out_file_param ,program_param);
     mess = '';
 catch ME;
     mess = [ME.identifier,'::',ME.message];

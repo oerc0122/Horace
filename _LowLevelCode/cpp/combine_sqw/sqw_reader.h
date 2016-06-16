@@ -1,10 +1,10 @@
 #ifndef H_SQW_READER
 #define H_SQW_READER
 
-#include "cells_in_memory.h"
+#include "pix_mem_map.h"
 #include "fileParameters.h"
 //-----------------------------------------------------------------------------------------------------------------
-class sqw_reader :public cells_in_memory
+class sqw_reader :public pix_mem_map
 {
     /* Class provides bin and pixel information for a pixels of a single sqw file.
 
