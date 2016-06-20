@@ -4,13 +4,14 @@
 //--------------------------------------------------------------------------------------------------------------------
 /*Constructor */
 pix_mem_map::pix_mem_map() :
-    max_num_of_pixels(std::numeric_limits<size_t>::max()),
-
     use_streambuf_direct(true),
     prebuf_pix_num(0),
     num_first_buf_bin(0), num_last_buf_bin(0),
 
     _nTotalBins(0), _binFileStartPos(0),
+    num_pix_isknown(false),
+    _numPixInFile(std::numeric_limits<uint64_t>::max()),
+
     BIN_BUF_SIZE(1),
     //
     use_multithreading(false),
@@ -44,6 +45,8 @@ void pix_mem_map::init(const std::string &full_file_name, size_t bin_start_pos, 
     this->full_file_name = full_file_name;
     if (this->h_data_file_bin.is_open()) {
         this->h_data_file_bin.close();
+        this->num_pix_isknown = false;
+        this->_numPixInFile = std::numeric_limits<uint64_t>::max();
     }
     //
     if (BufferSize != 0) {
@@ -86,13 +89,13 @@ void pix_mem_map::init(const std::string &full_file_name, size_t bin_start_pos, 
 }
 //
 
-/* return number of pixels this bin buffer describes starting from the bin buffer provided*/
+/* return number of pixels this memory map describes starting from the bin number provided*/
 size_t pix_mem_map::num_pix_described(size_t bin_number)const {
-    if (bin_number< this->num_first_buf_bin || bin_number > this->num_last_buf_bin) {
-        return 0;
+    if (bin_number< this->num_first_buf_bin || bin_number >= this->num_last_buf_bin) {
+        mexErrMsgTxt("pix_mem_map::num_pix_described -- bin number out of bin cache range");
     }
     size_t loc_bin = bin_number - this->num_first_buf_bin;
-    auto pEnd = this->nbin_buffer.begin() + this->num_last_buf_bin;
+    auto pEnd = this->nbin_buffer.begin() + (this->num_last_buf_bin - this->num_first_buf_bin - 1);
     size_t num_pix_start = this->nbin_buffer[loc_bin].pix_pos;
     return pEnd->pix_pos + pEnd->num_bin_pixels - num_pix_start;
 
@@ -119,8 +122,10 @@ void pix_mem_map::_read_bins(size_t num_bin, std::vector<bin_info> &inbuf,
     size_t buf_size = inbuf.size();
     bin_end = num_bin + buf_size;
 
-    if (bin_end > this->_nTotalBins) {
+    bool end_of_map_reached(false);
+    if (bin_end >= this->_nTotalBins) {
         bin_end = this->_nTotalBins;
+        end_of_map_reached = true;
     }
 
     size_t tot_num_bins_to_read = bin_end - num_bin;
@@ -141,7 +146,7 @@ void pix_mem_map::_read_bins(size_t num_bin, std::vector<bin_info> &inbuf,
             inbuf[i].num_bin_pixels = this->nbin_read_buffer[0];
             inbuf[i].pix_pos = inbuf[i - 1].pix_pos + inbuf[i - 1].num_bin_pixels;
         }
-    }
+     }
     else {
         if (tot_num_bins_to_read > nbin_read_buffer.size()) {
             this->nbin_read_buffer.resize(tot_num_bins_to_read);
@@ -157,7 +162,14 @@ void pix_mem_map::_read_bins(size_t num_bin, std::vector<bin_info> &inbuf,
             inbuf[i].pix_pos = inbuf[i - 1].pix_pos + this->nbin_read_buffer[i - 1];
         }
     }
+    //
     buf_end = tot_num_bins_to_read;
+    // store number of pixels described by the whole pix map
+    if (end_of_map_reached) {
+        this->_numPixInFile = this->prebuf_pix_num+ inbuf[buf_end-1].pix_pos+ inbuf[buf_end - 1].num_bin_pixels;
+        this->num_pix_isknown = true;
+    }
+
 
 
 
@@ -180,7 +192,7 @@ void pix_mem_map::_update_data_cash_(size_t bin_number,std::vector<bin_info> &nb
         prebuf_pix_num   = 0; // total number of pixels, stored before first pixel in bin.
         nbin_buffer[n_last].pix_pos        = 0;
         nbin_buffer[n_last].num_bin_pixels = 0;
-
+        this->num_pix_isknown  = true;
     }
     //------------------------------------------------------------------------------
     size_t start_bin = num_first_buf_bin;
@@ -264,27 +276,121 @@ void pix_mem_map::get_npix_for_bin(size_t bin_number, size_t &pix_start_num, siz
 
 }
 
+/* function to compare */
+bool comp_fun(const pix_mem_map::bin_info & lhs,const size_t & rhs) {
+    return lhs.pix_pos+ lhs.num_bin_pixels <= rhs;
+}
+/* convert memory map build in the form of the chunked list into the vector form.
+*
+*@returns number of pixels the map describes
+*Sets up nbin_buffer to keep the map, which describes these pixels
+*/
+size_t pix_mem_map::_flatten_memory_map(const std::list<std::vector<bin_info> > &bin_buf_holder, size_t map_size,size_t first_bin_number) {
 
-/* return the number of pixels described by the bins fitting the buffer of the size specified*/
-/*
-size_t pix_mem_map::num_pix_to_fit(size_t bin_number, size_t buf_size)const {
-    size_t n_bin = bin_number - num_first_buf_bin;
-    size_t shift = pix_pos_in_buffer[n_bin];
-    size_t val = buf_size + shift;
-    auto begin = pix_pos_in_buffer.begin() + n_bin;
-    auto end = pix_pos_in_buffer.begin() + this->buf_end;
-    auto it = std::upper_bound(begin, end, val);
+    std::vector<bin_info> bin_mem_map(map_size);
 
-    --it; // went step back to value smaller then the one exceeding the threshold
-    if (it == begin) {
-        return this->nbin_buffer[n_bin];
+    // Store rest of existing memory map in the beginning of the new map
+    size_t loc_bin_number = first_bin_number-this->num_first_buf_bin;
+    size_t num_bins       = this->num_last_buf_bin-this->num_first_buf_bin;
+    size_t prebuf_pix_num_shift = this->nbin_buffer[loc_bin_number].pix_pos;
+    // this changes first pixel number, described by the bin buffer
+    this->prebuf_pix_num += prebuf_pix_num_shift;
+
+
+    for (size_t i = loc_bin_number; i < num_bins;i++) {
+        bin_mem_map[i- loc_bin_number] = bin_info(this->nbin_buffer[i].num_bin_pixels, this->nbin_buffer[i].pix_pos- prebuf_pix_num_shift);
     }
-    else {
-        return *it - shift;
+    // initial location of the next bin chunk in the bin buffer
+    loc_bin_number = num_bins - loc_bin_number;
+    // next pixel will be shifted by this number:
+    prebuf_pix_num_shift = bin_mem_map[loc_bin_number-1].pix_pos + bin_mem_map[loc_bin_number - 1].num_bin_pixels;
+    // loop over all buffer and fill in the final vector of positions
+    for (auto it = bin_buf_holder.begin(); it != bin_buf_holder.end(); ++it) {
+        //size_t loc_bin_number = 
+        for (size_t i = 0; i < it->size(); ++i) {
+            bin_mem_map[loc_bin_number+i] = bin_info(it->operator[](i).num_bin_pixels, it->operator[](i).pix_pos+ prebuf_pix_num_shift);
+        }
+        loc_bin_number += it->size();
+        prebuf_pix_num_shift = bin_mem_map[loc_bin_number - 1].pix_pos + bin_mem_map[loc_bin_number - 1].num_bin_pixels;
     }
+    // add size of the last buffer chunk
+    //loc_bin_number += bin_buf_holder.back().size();
+
+    // Store changes
+    this->nbin_buffer.swap(bin_mem_map);
+    this->num_first_buf_bin = first_bin_number;
+    this->num_last_buf_bin  = first_bin_number+ loc_bin_number;
+    return (this->nbin_buffer[loc_bin_number -1].pix_pos+ this->nbin_buffer[loc_bin_number - 1].num_bin_pixels);
 
 }
+
+/* verify if memory map is defined for the number of pixels provided as the second argument
+ * Expand the map if necessary & possible.
+
+ Intended to deal with situation, when we want to read some number of pixels,
+ and need to be sure that the memory map for these pixels is defined.
+ 
+ * Return actual number of pixels best described by existing or extended memory map.
+ * Input: 
+  bin_number      -- current bin number to start estimate
+  num_pix_to_fit  -- number of pixels to verify memory map for
+ *Output:
+  @returns number of pixels memory map actually describes
+  end_of_pix_reached -- sets up to true if no more pixels is defined in the file. 
 */
+size_t pix_mem_map::expand_pix_map(size_t bin_number, size_t num_pix_to_fit, bool &end_of_pix_reached) {
+    
+    end_of_pix_reached = this->num_pix_isknown;
+
+    size_t pix_start_num, num_pix_in_bin;
+
+    this->get_npix_for_bin(bin_number, pix_start_num, num_pix_in_bin);
+    if (num_pix_in_bin >= num_pix_to_fit) {
+        return num_pix_in_bin;
+    }
+    size_t num_pix_in_map = this->num_pix_described(bin_number);
+    if (num_pix_in_map == num_pix_to_fit) {
+        return num_pix_in_map;
+    }else if (num_pix_in_map > num_pix_to_fit) {// find 
+        auto first_out = std::lower_bound(this->nbin_buffer.begin(), this->nbin_buffer.end(), num_pix_to_fit, comp_fun);
+        return (first_out->pix_pos);
+    }
+    else { 
+        if (end_of_pix_reached) { // we have read the whole memory map.
+            return num_pix_in_map;
+        }
+        // Expand memory map
+        std::list<std::vector<bin_info> > bin_buf_holder;
+        size_t block_size = this->nbin_buffer.size();
+        size_t num_first_bin = this->num_last_buf_bin;
+        size_t last_tmp_bin,buf_end;
+        size_t map_size(this->num_last_buf_bin - bin_number);   // initial pix map size (map for pixels from first requested to the last)
+        while (num_pix_in_map < num_pix_to_fit) {
+            bin_buf_holder.push_back(std::vector<bin_info>(block_size));
+            this->_read_bins(num_first_bin, bin_buf_holder.back(), last_tmp_bin, buf_end);
+            if (buf_end != block_size) { // if less then block_size pixels read into the buffer, resize buffer to allocate just buf_end pixels
+                bin_buf_holder.back().resize(buf_end);
+            }
+
+            num_pix_in_map += bin_buf_holder.back()[buf_end-1].pix_pos- bin_buf_holder.back()[0].pix_pos+ bin_buf_holder.back()[buf_end-1].num_bin_pixels;
+            map_size += buf_end;
+            if (this->num_pix_isknown) { // we have read up to the end of the map. Nothing to read now
+                end_of_pix_reached = true;
+                break;
+            }else{
+                num_first_bin = last_tmp_bin;
+            }
+        }
+        // convert memory map build in the form of the chunked list into the vector form.
+        num_pix_in_map = this->_flatten_memory_map(bin_buf_holder, map_size, bin_number);
+        if (this->num_pix_isknown) {
+            this->_numPixInFile = this->prebuf_pix_num+num_pix_in_map;
+        }
+        return expand_pix_map(bin_number, num_pix_to_fit, end_of_pix_reached);
+
+    }
+ 
+}
 
 
 
@@ -363,27 +469,6 @@ void pix_mem_map::read_bins_job() {
         this->bin_read_lock.unlock();
 
         this->bins_ready.notify_one();
-    }
-
-}
-*/
-/*Store results of the read operation within the class memory*/
-/*
-void  pix_mem_map::record_read_bins(size_t num_bin, size_t buf_nbin_end, size_t buf_end, const std::vector<uint64_t> &buffer) {
-    // Store results
-    this->num_first_buf_bin = num_bin;
-    this->buf_nbin_end = buf_nbin_end;
-    this->buf_end = buf_end;
-
-
-    this->pix_pos_in_buffer[0] = 0;
-    for (size_t i = 1; i < buf_end; i++) {
-        this->pix_pos_in_buffer[i] = this->pix_pos_in_buffer[i - 1] + this->nbin_buffer[i - 1];
-    }
-
-    if (this->buf_nbin_end == this->nTotalBins) {
-        size_t last = buf_end - 1;
-        this->max_num_of_pixels = this->pix_before_buffer + this->pix_pos_in_buffer[last] + this->nbin_buffer[last];
     }
 
 }

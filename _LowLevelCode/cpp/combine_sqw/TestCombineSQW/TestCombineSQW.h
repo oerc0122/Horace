@@ -22,6 +22,7 @@ class TestCombineSQW : public CxxTest::TestSuite {
     std::vector<uint64_t> sample_npix;
     std::vector<uint64_t> sample_pix_pos;
     std::string test_file_name;
+    size_t num_bin_in_file,bin_pos_in_file;
 public:
     // This pair of boilerplate methods prevent the suite being created statically
     // This means the constructor isn't called when running other tests
@@ -32,16 +33,18 @@ public:
 
     TestCombineSQW() {
         test_file_name = "d:/Data/svn/Horace/_test/test_symmetrisation/w3d_sqw.sqw";
-        sample_npix.resize(472392);
-        sample_pix_pos.resize(472392,0);
+        num_bin_in_file = 472392;
+        bin_pos_in_file = 5194471;
+        sample_npix.resize(num_bin_in_file);
+        sample_pix_pos.resize(num_bin_in_file,0);
         std::ifstream   data_file_bin;
         data_file_bin.open(test_file_name, std::ios::in | std::ios::binary);
         if (!data_file_bin.is_open()) {
             throw "Can not open test data file";
         }
         char *buf = reinterpret_cast<char *>(&sample_npix[0]);
-        data_file_bin.seekg(5194471);
-        data_file_bin.read(buf, 472392*8);
+        data_file_bin.seekg(bin_pos_in_file);
+        data_file_bin.read(buf, num_bin_in_file*8);
         for (size_t i = 1; i < sample_npix.size(); i++) {
             sample_pix_pos[i] = sample_pix_pos[i-1]+ sample_npix[i-1];
         }
@@ -51,7 +54,7 @@ public:
     void test_read_nbins() {
         pix_map_tester pix_map;
 
-        pix_map.init(this->test_file_name, 5194471, 472392, 128, false);
+        pix_map.init(this->test_file_name, bin_pos_in_file, num_bin_in_file, 128, false);
         std::vector<pix_mem_map::bin_info> buffer(256);
 
         size_t bin_end, buf_end;
@@ -72,7 +75,7 @@ public:
         }
 
         //--------------------------------------------------------------------------------------------
-        pix_map.init(this->test_file_name, 5194471, 472392, 0, false);
+        pix_map.init(this->test_file_name, bin_pos_in_file, num_bin_in_file, 0, false);
         std::vector<pix_mem_map::bin_info> buffer1(1);
 
         pix_map.read_bins(0, buffer1, bin_end, buf_end);
@@ -96,7 +99,7 @@ public:
 
         //--------------------------------------------------------------------------------------------
 
-        pix_map.init(this->test_file_name, 5194471, 472392, 0, false);
+        pix_map.init(this->test_file_name, bin_pos_in_file, num_bin_in_file, 0, false);
         std::vector<pix_mem_map::bin_info> buffer2(128);
 
         pix_map.read_bins(0, buffer2, bin_end, buf_end);
@@ -114,16 +117,20 @@ public:
             TS_ASSERT_EQUALS(buffer2[i].pix_pos, buffer[i - 1].pix_pos + buffer[i - 1].num_bin_pixels);
         }
 
-        pix_map.read_bins(472390, buffer2, bin_end, buf_end);
-        TS_ASSERT_EQUALS(472392, bin_end);
+        pix_map.read_bins(num_bin_in_file-2, buffer2, bin_end, buf_end);
+        TS_ASSERT_EQUALS(num_bin_in_file, bin_end);
         TS_ASSERT_EQUALS(2, buf_end);
+
 
 
     }
     void  test_get_npix_for_bins() {
         pix_mem_map pix_map;
 
-        pix_map.init(this->test_file_name, 5194471, 472392, 0, false);
+        pix_map.init(this->test_file_name, bin_pos_in_file, num_bin_in_file, 0, false);
+
+        // number of pixels in file is unknown
+        TS_ASSERT_EQUALS(std::numeric_limits<uint64_t>::max(), pix_map.num_pix_in_file());
 
         size_t pix_start, npix;
         pix_map.get_npix_for_bin(0, pix_start, npix);
@@ -147,11 +154,99 @@ public:
         TS_ASSERT_EQUALS(sample_npix[2400], npix);
         TS_ASSERT_EQUALS(sample_pix_pos[2400], pix_start);
 
+        // number of pixels in file is unknown
+        TS_ASSERT_EQUALS(std::numeric_limits<uint64_t>::max(), pix_map.num_pix_in_file());
+
+
         pix_map.get_npix_for_bin(2, pix_start, npix);
+
         TS_ASSERT_EQUALS(sample_npix[2], npix);
         TS_ASSERT_EQUALS(sample_pix_pos[2], pix_start);
 
+
+        pix_map.get_npix_for_bin(num_bin_in_file-2, pix_start, npix);
+        TS_ASSERT_EQUALS(sample_npix[num_bin_in_file - 2], 0);
+        TS_ASSERT_EQUALS(sample_pix_pos[num_bin_in_file - 2], pix_start);
+
+        // number of pixels in file is known 
+        TS_ASSERT(std::numeric_limits<uint64_t>::max() != pix_map.num_pix_in_file());
+
+        TS_ASSERT_EQUALS(pix_map.num_pix_in_file(), sample_pix_pos[num_bin_in_file - 1] + sample_npix[num_bin_in_file - 1])
+
     }
+    void test_fully_expand_pix_map_from_start() {
+        pix_mem_map pix_map;
+
+        pix_map.init(this->test_file_name, bin_pos_in_file, num_bin_in_file, 512, false);
+
+        bool end_pix_reached;
+        size_t num_pix = pix_map.expand_pix_map(4,512, end_pix_reached);
+        TS_ASSERT(!end_pix_reached);
+        TS_ASSERT_EQUALS(512, num_pix);
+
+        // Read whole map in memory requesting map for much bigger number of npixels then the real npix number in the file.
+        num_pix = pix_map.expand_pix_map(0,2* 1164180, end_pix_reached);
+        // the file contains 
+        TS_ASSERT_EQUALS(sample_pix_pos[num_bin_in_file-1]+ sample_npix[num_bin_in_file - 1], num_pix);
+        TS_ASSERT(end_pix_reached);
+
+        for (size_t i = 0; i < num_bin_in_file; i++) {
+            size_t pix_start,npix;
+            pix_map.get_npix_for_bin(i, pix_start, npix);
+            TS_ASSERT_EQUALS(pix_start, sample_pix_pos[i]);
+            TS_ASSERT_EQUALS(npix, sample_npix[i]);
+
+        }
+        TS_ASSERT_EQUALS(pix_map.num_pix_in_file(), num_pix);
+
+    }
+    void test_expand_pix_map() {
+        pix_mem_map pix_map;
+
+        pix_map.init(this->test_file_name, bin_pos_in_file, num_bin_in_file, 512, false);
+
+        bool end_pix_reached;
+        size_t num_pix1 = pix_map.expand_pix_map(511, 512, end_pix_reached);
+        TS_ASSERT(!end_pix_reached);
+        TS_ASSERT_EQUALS(510, num_pix1);
+
+        size_t pix_pos,npix;
+        pix_map.get_npix_for_bin(511,pix_pos,npix);
+        TS_ASSERT_EQUALS(sample_pix_pos[511],pix_pos);
+        TS_ASSERT_EQUALS(sample_npix[511], npix);
+
+        // Read whole map in memory requesting map for much bigger number of npixels then the real npix number in the file.
+        size_t num_pix = pix_map.expand_pix_map(512, 2 * 1164180, end_pix_reached);
+        // the file contains 
+        TS_ASSERT_EQUALS(sample_pix_pos[num_bin_in_file - 1] + sample_npix[num_bin_in_file - 1]- pix_pos- npix, num_pix);
+        TS_ASSERT(end_pix_reached);
+
+        for (size_t i = 512; i < num_bin_in_file; i++) {
+            size_t pix_start, npix;
+            pix_map.get_npix_for_bin(i, pix_start, npix);
+            TS_ASSERT_EQUALS(pix_start, sample_pix_pos[i]);
+            TS_ASSERT_EQUALS(npix, sample_npix[i]);
+
+        }
+        TS_ASSERT_EQUALS(pix_map.num_pix_in_file(), num_pix+ pix_pos+ npix);
+
+        num_pix = pix_map.expand_pix_map(512, 512, end_pix_reached);
+        TS_ASSERT(end_pix_reached);
+        TS_ASSERT_EQUALS(512, num_pix);
+
+
+        num_pix = pix_map.expand_pix_map(4, 512, end_pix_reached);
+        TS_ASSERT(!end_pix_reached);
+        TS_ASSERT_EQUALS(512, num_pix);
+
+        pix_map.get_npix_for_bin(512+4, pix_pos, npix);
+        TS_ASSERT_EQUALS(sample_pix_pos[512+4], pix_pos);
+        TS_ASSERT_EQUALS(sample_npix[512+4], npix);
+
+
+    }
+
+
 
     /*
 
@@ -162,7 +257,7 @@ public:
             file_par.file_id = 0;
             file_par.nbin_start_pos = 5194471;
             file_par.pix_start_pos = 8973651;
-            file_par.total_NfileBins = 472392;
+            file_par.total_NfileBins = num_bin_in_file;
             bool initialized(false);
             try {
                 reader.init(file_par, false, false, 128);
@@ -200,7 +295,7 @@ public:
             file_par.file_id = 0;
             file_par.nbin_start_pos = 5194471;
             file_par.pix_start_pos = 8973651;
-            file_par.total_NfileBins = 472392;
+            file_par.total_NfileBins = num_bin_in_file;
             bool initialized(false);
             try {
                 reader.init(file_par, false, false, 128,1);
@@ -240,7 +335,7 @@ public:
             file_par.file_id = 0;
             file_par.nbin_start_pos = 5194471;
             file_par.pix_start_pos = 8973651;
-            file_par.total_NfileBins = 472392;
+            file_par.total_NfileBins = num_bin_in_file;
             bool initialized(false);
             try {
                 //(fileParam[i], change_fileno, fileno_provided, read_buf_size, read_files_multitreaded);
@@ -257,7 +352,7 @@ public:
             ProgSettings.nBin2read = 0;
             ProgSettings.num_log_ticks = 100;
             ProgSettings.pixBufferSize = 1164180;
-            ProgSettings.totNumBins = 472392;
+            ProgSettings.totNumBins = num_bin_in_file;
 
             exchange_buffer Buffer(ProgSettings.pixBufferSize, file_par.total_NfileBins, ProgSettings.num_log_ticks);
             nsqw_pix_reader Reader(ProgSettings, reader_noThread, Buffer);

@@ -21,9 +21,6 @@
     <ClInclude Include="exchange_buffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="cells_in_memory.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="sqw_reader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -42,9 +39,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="exchange_buffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="cells_in_memory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="sqw_reader.cpp">

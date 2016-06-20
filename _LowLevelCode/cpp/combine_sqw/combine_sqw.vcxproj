@@ -250,7 +250,6 @@ copy $(OutDir)*.pdb  $(OutDir)..\..\..\..\..\DLL\_PCWIN64\*</Command>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="cells_in_memory.cpp" />
     <ClCompile Include="combine_sqw.cpp" />
     <ClCompile Include="exchange_buffer.cpp" />
     <ClCompile Include="fileParameters.cpp" />
@@ -259,7 +258,6 @@ copy $(OutDir)*.pdb  $(OutDir)..\..\..\..\..\DLL\_PCWIN64\*</Command>
     <ClCompile Include="sqw_reader.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="cells_in_memory.h" />
     <ClInclude Include="combine_sqw.h" />
     <ClInclude Include="exchange_buffer.h" />
     <ClInclude Include="fileParameters.h" />
