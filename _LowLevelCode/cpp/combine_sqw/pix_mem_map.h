@@ -55,23 +55,22 @@ protected:
     // the name of the file to process
     std::string full_file_name;
 
-    std::mutex io_lock;
-    // handle pointing to open file
-
     // EXPOSED FOR TESTING
     void _read_bins(size_t num_bin,std::vector<bin_info> &buffer,
         size_t &bin_end, size_t &buf_end);
 
     void _update_data_cash(size_t bin_number);
     void _update_data_cash_(size_t bin_number, std::vector<bin_info> &nbin_buffer,
-        size_t &num_first_buf_bin, size_t &num_last_buf_bin, size_t &prebuf_pix_num);
+        size_t &num_first_buf_bin, size_t &num_last_buf_bin, size_t &end_buf_bin, size_t &prebuf_pix_num);
     size_t _flatten_memory_map(const std::list<std::vector<bin_info> > &bin_buf_holder, size_t map_size, size_t first_bin_number);
 private:
     bool use_streambuf_direct;
-    size_t num_first_buf_bin,num_last_buf_bin; // number of first and last bin stored in memory
+    size_t num_first_buf_bin,num_last_buf_bin,buf_end; // number of first and last bin stored in memory and number of last bin in the buffer
 
     size_t prebuf_pix_num;                // total number of pixels, stored before the pixels corresponding to the first bin buffer
     std::vector<bin_info> nbin_buffer;   // buffer containing bin info
+    // temporary buffer, used by pix reader to read raw bin info.
+    std::vector<uint64_t> nbin_read_buffer;
 
     //----------------------------------------------------------------------------
     size_t  _nTotalBins;
@@ -79,28 +78,32 @@ private:
 
     bool num_pix_isknown;
     uint64_t  _numPixInFile;
+    size_t  BUF_EXTENSION_STEP;
 
 
     // thread buffer and thread reading operations ;
-    bool nbins_read, read_completed;
+    bool use_multithreading;
+
+protected: // for testing only
+    bool nbins_read, read_job_completed;
     size_t n_first_rbuf_bin, rbuf_nbin_end, rbuf_end;
+    std::vector<bin_info>  thread_nbin_buffer;
 
-    std::condition_variable bins_ready, read_bins_needed;
+    std::condition_variable read_bins_needed;
     std::thread read_bins_job_holder;
-
+    std::mutex bin_read_lock,exchange_lock;
+    void read_bins_job();
 
     //void calc_buf_range(size_t num_bin, size_t buf_size, size_t &tot_num_bins_to_read);
 
-    bool use_multithreading;
-    std::mutex bin_read_lock, exchange_lock;
-    //void read_bins_job();
+private:
 
 
     static const long BIN_SIZE_BYTES = 8;
     size_t BIN_BUF_SIZE; // physical size of the bins buffer
     //
     std::ifstream h_data_file_bin;
-    std::vector<uint64_t>   nbin_read_buffer;
+
 
 };
 
