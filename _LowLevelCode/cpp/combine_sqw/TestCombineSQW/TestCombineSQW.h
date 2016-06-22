@@ -19,8 +19,22 @@ public:
     size_t get_last_thread_bin()const{return  rbuf_nbin_end;}
     size_t get_n_buf_pix()const{return  rbuf_end;}
     void wait_for_read_completed() {
-        std::lock_guard<std::mutex> lock(bin_read_lock);
+        std::unique_lock<std::mutex> data_ready(this->exchange_lock);
+        this->bins_ready.wait(data_ready, [this]() {return this->nbins_read; });
+        //std::lock_guard<std::mutex> lock(bin_read_lock);
     }
+    bool thread_get_data(size_t &num_bin, std::vector<bin_info> &inbuf, size_t &bin_end, size_t &buf_end) {
+        return pix_mem_map::_thread_get_data(num_bin, inbuf, bin_end, buf_end);
+
+    }
+    void thread_query_data(size_t &num_first_bin, size_t &num_last_bin, size_t &buf_end) {
+        pix_mem_map::_thread_query_data(num_first_bin, num_last_bin,buf_end);
+    }
+    void thread_request_to_read(size_t start_bin) {
+        pix_mem_map::_thread_request_to_read(start_bin);
+
+    }
+
 
 };
 
@@ -239,12 +253,12 @@ public:
         TS_ASSERT_EQUALS(pix_map.num_pix_in_file(), num_pix + pix_pos + npix);
 
         num_pix = pix_map.expand_pix_map(512, 512, end_pix_reached);
-        TS_ASSERT(end_pix_reached);
+        TS_ASSERT(!end_pix_reached);
         TS_ASSERT_EQUALS(512, num_pix);
 
 
         num_pix = pix_map.expand_pix_map(4, 512, end_pix_reached);
-        TS_ASSERT(end_pix_reached);
+        TS_ASSERT(!end_pix_reached);
         TS_ASSERT_EQUALS(512, num_pix);
 
         pix_map.get_npix_for_bin(512 + 4, pix_pos, npix);
@@ -282,11 +296,26 @@ public:
     void test_thread_job() {
         pix_map_tester pix_map;
         pix_map.init(this->test_file_name, bin_pos_in_file, num_bin_in_file, 0, true);
-        pix_map.wait_for_read_completed();
+        size_t first_th_bin,last_tr_bin,buf_end;
 
-        TS_ASSERT_EQUALS(pix_map.get_first_thread_bin(),0);
-        TS_ASSERT_EQUALS(pix_map.get_last_thread_bin(), 512);
-        TS_ASSERT_EQUALS(pix_map.get_n_buf_pix(),512);
+        pix_map.thread_query_data(first_th_bin, last_tr_bin, buf_end);
+        TS_ASSERT_EQUALS(first_th_bin,0);
+        TS_ASSERT_EQUALS(last_tr_bin, 512);
+        TS_ASSERT_EQUALS(buf_end,512);
+
+        pix_map.thread_request_to_read(600);
+        pix_map.thread_query_data(first_th_bin, last_tr_bin, buf_end);
+        TS_ASSERT_EQUALS(first_th_bin, 600);
+        TS_ASSERT_EQUALS(last_tr_bin, 600+512);
+        TS_ASSERT_EQUALS(buf_end, 512);
+
+        std::vector<pix_mem_map::bin_info> buf;
+        pix_map.thread_get_data(first_th_bin, buf,last_tr_bin, buf_end);
+
+        pix_map.thread_query_data(first_th_bin, last_tr_bin, buf_end);
+        TS_ASSERT_EQUALS(first_th_bin, 512+600);
+        TS_ASSERT_EQUALS(last_tr_bin, 600 + 1024);
+        TS_ASSERT_EQUALS(buf_end, 512);
 
 
     }
