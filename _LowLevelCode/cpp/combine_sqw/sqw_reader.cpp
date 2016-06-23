@@ -3,10 +3,10 @@
 //--------------------------------------------------------------------------------------------------------------------
 //-----------  SQW READER (FOR SINGLE SQW FILE)  ---------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------------
-sqw_reader::sqw_reader(size_t working_buf_size) :
-    pix_mem_map(working_buf_size),
+sqw_reader::sqw_reader(size_t pix_buf_size) :
+    pix_map(),
     npix_in_buf_start(0), buf_pix_end(0),
-    PIX_BUF_SIZE(working_buf_size), change_fileno(false), fileno(true),
+    PIX_BUF_SIZE(pix_buf_size), change_fileno(false), fileno(true),
     use_multithreading_pix(true), pix_read(false), pix_read_job_completed(false), n_first_buf_pix(0)
 {}
 
@@ -22,22 +22,19 @@ sqw_reader::~sqw_reader() {
 
         read_pix_job_holder.join();
     }
-#ifdef STDIO
-    fclose(h_data_file_pix);
-#else
+
     h_data_file_pix.close();
-#endif
-
 }
 
-
-sqw_reader::sqw_reader(const fileParameters &fpar, bool changefileno, bool fileno_provided, size_t working_buf_size)
-    : sqw_reader(working_buf_size)
+/*
+sqw_reader::sqw_reader(const fileParameters &fpar, bool changefileno, bool fileno_provided, size_t pix_buf_size)
+    : sqw_reader(pix_buf_size)
 {
-    this->init(fpar, changefileno, fileno_provided, working_buf_size);
+    this->init(fpar, changefileno, fileno_provided, pix_buf_size);
 }
+*/
 //
-void sqw_reader::init(const fileParameters &fpar, bool changefileno, bool fileno_provided, size_t working_buf_size, int multithreading_settings) {
+void sqw_reader::init(const fileParameters &fpar, bool changefileno, bool fileno_provided, size_t pix_buf_size, int multithreading_settings) {
     bool bin_multithreading;
     switch (multithreading_settings) {
     case(0):
@@ -61,31 +58,40 @@ void sqw_reader::init(const fileParameters &fpar, bool changefileno, bool fileno
             ", 2 (debug mode, only bin thread used for reading ) or 3 (debug mode , use pix read thread, and disable bin reading)");
     }
 
-    pix_mem_map::init(fpar.fileName, fpar.nbin_start_pos, fpar.total_NfileBins, working_buf_size, bin_multithreading);
-#ifdef STDIO
-    h_data_file_pix = fopen(full_file_name.c_str(), "rb");
-    bin_buffer.fpos = ftell(h_data_file_pix);
-    if (!h_data_file_pix) {
-        std::string error("Can not open file: ");
-        error += full_file_name;
-        mexErrMsgTxt(error.c_str());
+    this->fileDescr = fpar;
+
+    this->pix_map.init(fpar.fileName, fpar.nbin_start_pos, fpar.total_NfileBins, pix_buf_size, bin_multithreading);
+
+    if (pix_buf_size != 0) {
+        this->PIX_BUF_SIZE = pix_buf_size;
+        this->nbin_read_buffer.resize(BIN_BUF_SIZE);
+        char *tBuff = reinterpret_cast<char *>(&nbin_read_buffer[0]);
+        h_data_file_bin.rdbuf()->pubsetbuf(tBuff, BIN_BUF_SIZE*BIN_SIZE_BYTES);
+        use_streambuf_direct = false;
+        //
+        nbin_buffer.resize(BIN_BUF_SIZE);
     }
-#else
+    else {
+        BIN_BUF_SIZE = 1;
+        use_streambuf_direct = true;
+        nbin_read_buffer.resize(BIN_BUF_SIZE);
+        //
+        this->BUF_EXTENSION_STEP = 512;
+        nbin_buffer.resize(BUF_EXTENSION_STEP);
+    }
+
+
     h_data_file_pix.rdbuf()->pubsetbuf(0, 0);
-    h_data_file_pix.open(this->full_file_name, std::ios::in | std::ios::binary);
+    h_data_file_pix.open(this->fileDescr.fileName,std::ios::in | std::ios::binary);
     if (!h_data_file_pix.is_open()) {
         std::string error("Can not open file: ");
-        error += this->full_file_name;
+        error += this->fileDescr.fileName;
         mexErrMsgTxt(error.c_str());
-    }
-#endif
 
-
-    this->fileDescr = fpar;
     this->change_fileno = changefileno;
     this->fileno = fileno_provided;
 
-    this->PIX_BUF_SIZE = working_buf_size;
+    this->PIX_BUF_SIZE = pix_buf_size;
     this->pix_buffer.resize(PIX_BUF_SIZE*PIX_SIZE);
 
     if (this->use_multithreading_pix) {
@@ -130,11 +136,10 @@ void sqw_reader::get_pix_for_bin(size_t bin_number, float *const pix_info, size_
 
 }
 /*
-% read pixels information, located in the bin with the number requested
-%
-% read either all pixels in the buffer or at least the number
-% specified
-%
+ read pixels information, located in the bin with the number requested
+
+ read either all pixels in the buffer or at least the number specified
+
 */
 void sqw_reader::read_pixels(size_t bin_number, size_t pix_start_num) {
 

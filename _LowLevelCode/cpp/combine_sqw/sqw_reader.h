@@ -4,7 +4,7 @@
 #include "pix_mem_map.h"
 #include "fileParameters.h"
 //-----------------------------------------------------------------------------------------------------------------
-class sqw_reader :public pix_mem_map
+class sqw_reader
 {
     /* Class provides bin and pixel information for a pixels of a single sqw file.
 
@@ -18,7 +18,7 @@ class sqw_reader :public pix_mem_map
     */
 public:
     sqw_reader(size_t working_buf_size = 4096);
-    sqw_reader(const fileParameters &fpar, bool changefileno, bool fileno_provided, size_t working_buf_size = 4096);
+    //sqw_reader(const fileParameters &fpar, bool changefileno, bool fileno_provided, size_t working_buf_size = 4096);
     ~sqw_reader();
     void init(const fileParameters &fpar, bool changefileno, bool fileno_provided, size_t working_buf_size = 4096, int use_multithreading = 0);
     /* return pixel information for the pixels stored in the bin */
@@ -26,16 +26,22 @@ public:
         size_t &pix_start_num, size_t &num_bin_pix, bool position_is_defined = false);
 private:
     void read_pixels(size_t bin_number, size_t pix_start_num);
-    size_t check_binInfo_loaded_(size_t bin_number, bool extend_bin_buffer, size_t pix_start_num);
 
     void read_pix_io(size_t pix_start_num, std::vector<float> &pix_buffer, size_t num_pix_to_read);
 
-    // parameters, which describe 
+
+    // parameters, which describe file 
     fileParameters fileDescr;
+    pix_mem_map pix_map;
+
 
     size_t npix_in_buf_start; //= 0;
     size_t buf_pix_end; //  number of last pixel in the buffer+1
     std::vector<float> pix_buffer; // buffer containing pixels (9*npix size)
+
+    bool use_streambuf_direct;
+    std::ifstream h_data_file_pix;
+
 
                                    // number of pixels to read in pix buffer
     size_t PIX_BUF_SIZE;
@@ -44,11 +50,13 @@ private:
     // Boolean, indicating if one needs to offset pixel's run number id by fileDescr.file_id
     // or set up its value into fileDescr.file_id;
     bool fileno;
-
+    
     static const size_t PIX_SIZE = 9; // size of the pixel in pixel data units (float)
-    static const size_t PIX_BLOCK_SIZE_BYTES = 36; //9 * 4; // size of the pixel block in bytes
+    static const size_t PIX_SIZE_BYTES = 36; //9 * 4; // size of the pixel block in bytes
+    static const size_t PIX_BUF_DEFAULT_SIZE = 512; // in pixels, real size x 9;
 
-                                                   // thread buffer and thread reading operations ;
+
+    // thread buffer and thread reading operations ;
     std::mutex pix_read_lock, pix_exchange_lock;
     bool use_multithreading_pix, pix_read, pix_read_job_completed;
     size_t n_first_buf_pix;
@@ -58,12 +66,6 @@ private:
 
     void read_pixels_job();
 
-#ifdef STDIO
-    FILE *h_data_file_pix;
-    long fpos;
-#else
-    std::ifstream h_data_file_pix;
-#endif
 
 
 };

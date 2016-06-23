@@ -175,6 +175,7 @@
     <ClCompile Include="..\exchange_buffer.cpp" />
     <ClCompile Include="..\fileParameters.cpp" />
     <ClCompile Include="..\sqw_pix_writer.cpp" />
+    <ClCompile Include="..\sqw_reader.cpp" />
     <ClCompile Include="TestCombineSQW.cpp" />
     <ClCompile Include="test_header.cpp" />
   </ItemGroup>

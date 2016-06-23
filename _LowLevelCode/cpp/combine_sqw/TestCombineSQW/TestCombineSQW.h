@@ -211,6 +211,13 @@ public:
         // the file contains 
         TS_ASSERT_EQUALS(sample_pix_pos[num_bin_in_file - 1] + sample_npix[num_bin_in_file - 1], num_pix);
         TS_ASSERT(end_pix_reached);
+        // check whole map is loaded in memory
+        size_t first_mem_bin, last_mem_bin, n_tot_bins;
+        pix_map.get_map_param(first_mem_bin, last_mem_bin, n_tot_bins);
+        TS_ASSERT_EQUALS(first_mem_bin, 0);
+        TS_ASSERT_EQUALS(last_mem_bin, n_tot_bins);
+        TS_ASSERT_EQUALS(last_mem_bin, num_bin_in_file);
+
 
         for (size_t i = 0; i < num_bin_in_file; i++) {
             size_t pix_start, npix;
@@ -369,8 +376,109 @@ public:
         TS_ASSERT_EQUALS(pix_map.num_pix_in_file(), sample_pix_pos[num_bin_in_file - 1] + sample_npix[num_bin_in_file - 1])
 
     }
+    void test_fully_expand_pix_map_from_start_threads() {
+        pix_mem_map pix_map;
+
+        pix_map.init(this->test_file_name, bin_pos_in_file, num_bin_in_file, 512, true);
+
+        bool end_pix_reached;
+        size_t num_pix = pix_map.expand_pix_map(4, 512, end_pix_reached);
+        TS_ASSERT(!end_pix_reached);
+        TS_ASSERT_EQUALS(512, num_pix);
+
+        // Read whole map in memory requesting map for much bigger number of npixels then the real npix number in the file.
+        num_pix = pix_map.expand_pix_map(0, 2 * 1164180, end_pix_reached);
+        // the file contains 
+        TS_ASSERT_EQUALS(sample_pix_pos[num_bin_in_file - 1] + sample_npix[num_bin_in_file - 1], num_pix);
+        TS_ASSERT(end_pix_reached);
+        // check whole map is loaded in memory
+        size_t first_mem_bin, last_mem_bin, n_tot_bins;
+        pix_map.get_map_param(first_mem_bin, last_mem_bin, n_tot_bins);
+        TS_ASSERT_EQUALS(first_mem_bin,0);
+        TS_ASSERT_EQUALS(last_mem_bin, n_tot_bins);
+        TS_ASSERT_EQUALS(last_mem_bin, num_bin_in_file);
+
+        for (size_t i = 0; i < num_bin_in_file; i++) {
+            size_t pix_start, npix;
+            pix_map.get_npix_for_bin(i, pix_start, npix);
+            TS_ASSERT_EQUALS(pix_start, sample_pix_pos[i]);
+            TS_ASSERT_EQUALS(npix, sample_npix[i]);
+
+        }
+        TS_ASSERT_EQUALS(pix_map.num_pix_in_file(), num_pix);
+
+    }
+
+    void test_expand_pix_map_threads() {
+        pix_mem_map pix_map;
+
+        pix_map.init(this->test_file_name, bin_pos_in_file, num_bin_in_file, 512, true);
+
+        bool end_pix_reached;
+        size_t num_pix1 = pix_map.expand_pix_map(511, 512, end_pix_reached);
+        TS_ASSERT(!end_pix_reached);
+        TS_ASSERT_EQUALS(510, num_pix1);
+
+        size_t pix_pos, npix;
+        pix_map.get_npix_for_bin(511, pix_pos, npix);
+        TS_ASSERT_EQUALS(sample_pix_pos[511], pix_pos);
+        TS_ASSERT_EQUALS(sample_npix[511], npix);
+
+        // Read whole map in memory requesting map for much bigger number of npixels then the real npix number in the file.
+        size_t num_pix = pix_map.expand_pix_map(512, 2 * 1164180, end_pix_reached);
+        // the file contains 
+        TS_ASSERT_EQUALS(sample_pix_pos[num_bin_in_file - 1] + sample_npix[num_bin_in_file - 1] - pix_pos - npix, num_pix);
+        TS_ASSERT(end_pix_reached);
+
+        for (size_t i = 512; i < num_bin_in_file; i++) {
+            size_t pix_start, npix;
+            pix_map.get_npix_for_bin(i, pix_start, npix);
+            TS_ASSERT_EQUALS(pix_start, sample_pix_pos[i]);
+            TS_ASSERT_EQUALS(npix, sample_npix[i]);
+
+        }
+        TS_ASSERT_EQUALS(pix_map.num_pix_in_file(), num_pix + pix_pos + npix);
+
+        num_pix = pix_map.expand_pix_map(512, 512, end_pix_reached);
+        TS_ASSERT(!end_pix_reached);
+        TS_ASSERT_EQUALS(512, num_pix);
 
 
+        num_pix = pix_map.expand_pix_map(4, 512, end_pix_reached);
+        TS_ASSERT(!end_pix_reached);
+        TS_ASSERT_EQUALS(512, num_pix);
+
+        pix_map.get_npix_for_bin(512 + 4, pix_pos, npix);
+        TS_ASSERT_EQUALS(sample_pix_pos[512 + 4], pix_pos);
+        TS_ASSERT_EQUALS(sample_npix[512 + 4], npix);
+
+
+    }
+
+    void test_normal_expand_mode_threads() {
+        pix_mem_map pix_map;
+
+        pix_map.init(this->test_file_name, bin_pos_in_file, num_bin_in_file, 512, true);
+        size_t pix_pos, npix;
+        pix_map.get_npix_for_bin(0, pix_pos, npix);
+        TS_ASSERT_EQUALS(sample_pix_pos[0], pix_pos);
+        TS_ASSERT_EQUALS(sample_npix[0], npix);
+
+        bool end_pix_reached;
+
+        size_t bin_num(0), pix_buf_size(512), num_pix, ic(0);
+        while (bin_num < num_bin_in_file - pix_buf_size) {
+            bin_num += pix_buf_size;
+            pix_map.get_npix_for_bin(bin_num, pix_pos, npix);
+            size_t n_pix = pix_map.num_pix_described(bin_num);
+            if (n_pix < pix_buf_size) {
+                num_pix = pix_map.expand_pix_map(bin_num, pix_buf_size, end_pix_reached);
+            }
+            TS_ASSERT_EQUALS(sample_pix_pos[bin_num], pix_pos);
+            TS_ASSERT_EQUALS(sample_npix[bin_num], npix);
+            ic++;
+        }
+    }
 
 
     /*

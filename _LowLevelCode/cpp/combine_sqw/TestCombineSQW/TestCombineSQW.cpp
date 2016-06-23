@@ -40,25 +40,43 @@ public:
 
 static class TestDescription_suite_TestCombineSQW_test_expand_pix_map : public CxxTest::RealTestDescription {
 public:
- TestDescription_suite_TestCombineSQW_test_expand_pix_map() : CxxTest::RealTestDescription( Tests_TestCombineSQW, suiteDescription_TestCombineSQW, 225, "test_expand_pix_map" ) {}
+ TestDescription_suite_TestCombineSQW_test_expand_pix_map() : CxxTest::RealTestDescription( Tests_TestCombineSQW, suiteDescription_TestCombineSQW, 232, "test_expand_pix_map" ) {}
  void runTest() { if ( suite_TestCombineSQW ) suite_TestCombineSQW->test_expand_pix_map(); }
 } testDescription_suite_TestCombineSQW_test_expand_pix_map;
 
 static class TestDescription_suite_TestCombineSQW_test_normal_expand_mode : public CxxTest::RealTestDescription {
 public:
- TestDescription_suite_TestCombineSQW_test_normal_expand_mode() : CxxTest::RealTestDescription( Tests_TestCombineSQW, suiteDescription_TestCombineSQW, 270, "test_normal_expand_mode" ) {}
+ TestDescription_suite_TestCombineSQW_test_normal_expand_mode() : CxxTest::RealTestDescription( Tests_TestCombineSQW, suiteDescription_TestCombineSQW, 277, "test_normal_expand_mode" ) {}
  void runTest() { if ( suite_TestCombineSQW ) suite_TestCombineSQW->test_normal_expand_mode(); }
 } testDescription_suite_TestCombineSQW_test_normal_expand_mode;
 
 static class TestDescription_suite_TestCombineSQW_test_thread_job : public CxxTest::RealTestDescription {
 public:
- TestDescription_suite_TestCombineSQW_test_thread_job() : CxxTest::RealTestDescription( Tests_TestCombineSQW, suiteDescription_TestCombineSQW, 296, "test_thread_job" ) {}
+ TestDescription_suite_TestCombineSQW_test_thread_job() : CxxTest::RealTestDescription( Tests_TestCombineSQW, suiteDescription_TestCombineSQW, 303, "test_thread_job" ) {}
  void runTest() { if ( suite_TestCombineSQW ) suite_TestCombineSQW->test_thread_job(); }
 } testDescription_suite_TestCombineSQW_test_thread_job;
 
 static class TestDescription_suite_TestCombineSQW_test_get_npix_for_bins_threads : public CxxTest::RealTestDescription {
 public:
- TestDescription_suite_TestCombineSQW_test_get_npix_for_bins_threads() : CxxTest::RealTestDescription( Tests_TestCombineSQW, suiteDescription_TestCombineSQW, 322, "test_get_npix_for_bins_threads" ) {}
+ TestDescription_suite_TestCombineSQW_test_get_npix_for_bins_threads() : CxxTest::RealTestDescription( Tests_TestCombineSQW, suiteDescription_TestCombineSQW, 329, "test_get_npix_for_bins_threads" ) {}
  void runTest() { if ( suite_TestCombineSQW ) suite_TestCombineSQW->test_get_npix_for_bins_threads(); }
 } testDescription_suite_TestCombineSQW_test_get_npix_for_bins_threads;
+
+static class TestDescription_suite_TestCombineSQW_test_fully_expand_pix_map_from_start_threads : public CxxTest::RealTestDescription {
+public:
+ TestDescription_suite_TestCombineSQW_test_fully_expand_pix_map_from_start_threads() : CxxTest::RealTestDescription( Tests_TestCombineSQW, suiteDescription_TestCombineSQW, 379, "test_fully_expand_pix_map_from_start_threads" ) {}
+ void runTest() { if ( suite_TestCombineSQW ) suite_TestCombineSQW->test_fully_expand_pix_map_from_start_threads(); }
+} testDescription_suite_TestCombineSQW_test_fully_expand_pix_map_from_start_threads;
+
+static class TestDescription_suite_TestCombineSQW_test_expand_pix_map_threads : public CxxTest::RealTestDescription {
+public:
+ TestDescription_suite_TestCombineSQW_test_expand_pix_map_threads() : CxxTest::RealTestDescription( Tests_TestCombineSQW, suiteDescription_TestCombineSQW, 412, "test_expand_pix_map_threads" ) {}
+ void runTest() { if ( suite_TestCombineSQW ) suite_TestCombineSQW->test_expand_pix_map_threads(); }
+} testDescription_suite_TestCombineSQW_test_expand_pix_map_threads;
+
+static class TestDescription_suite_TestCombineSQW_test_normal_expand_mode_threads : public CxxTest::RealTestDescription {
+public:
+ TestDescription_suite_TestCombineSQW_test_normal_expand_mode_threads() : CxxTest::RealTestDescription( Tests_TestCombineSQW, suiteDescription_TestCombineSQW, 458, "test_normal_expand_mode_threads" ) {}
+ void runTest() { if ( suite_TestCombineSQW ) suite_TestCombineSQW->test_normal_expand_mode_threads(); }
+} testDescription_suite_TestCombineSQW_test_normal_expand_mode_threads;
 

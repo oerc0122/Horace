@@ -27,6 +27,12 @@ pix_mem_map::~pix_mem_map() {
 
 
 }
+void pix_mem_map::get_map_param(size_t &first_mem_bin, size_t &last_mem_bin, size_t &n_tot_bins)const{
+    first_mem_bin = this->num_first_buf_bin;
+    last_mem_bin  = this->num_last_buf_bin;
+    n_tot_bins    = this->_nTotalBins;
+
+}
 
 void pix_mem_map::init(const std::string &full_file_name, size_t bin_start_pos, size_t n_tot_bins, size_t BufferSize, bool use_multithreading) {
 
@@ -240,6 +246,8 @@ bool pix_mem_map::_thread_get_data(size_t &num_first_bin, std::vector<bin_info> 
 
 
 }
+
+
 /* Get data for the bin provided and place all subsequent bin info into data cash */
 void pix_mem_map::_update_data_cash_(size_t bin_number, std::vector<bin_info> &nbin_buffer,
     size_t &num_first_buf_bin, size_t &num_last_buf_bin, size_t &end_buf_bin, size_t &prebuf_pix_num) {
@@ -297,7 +305,6 @@ void pix_mem_map::_update_data_cash_(size_t bin_number, std::vector<bin_info> &n
 
 }
 
-
 /** get number of pixels, stored in the bin and the position of these pixels within pixel array
 *
 * loads bin information for a pixel, which does not have this information loaded
@@ -321,7 +328,7 @@ void pix_mem_map::get_npix_for_bin(size_t bin_number, size_t &pix_start_num, siz
 
 }
 
-/* function to compare */
+/* function to compare two bin_info classes*/
 bool comp_fun(const pix_mem_map::bin_info & lhs, const size_t & rhs) {
     return lhs.pix_pos + lhs.num_bin_pixels <= rhs;
 }
@@ -399,6 +406,7 @@ size_t pix_mem_map::expand_pix_map(size_t bin_number, size_t num_pix_to_fit, boo
     end_of_pix_reached = false;
     size_t pix_start_num, num_pix_in_bin;
     this->get_npix_for_bin(bin_number, pix_start_num, num_pix_in_bin);
+
     if (num_pix_in_bin >= num_pix_to_fit) {
         return num_pix_in_bin;
     }
@@ -423,19 +431,25 @@ size_t pix_mem_map::expand_pix_map(size_t bin_number, size_t num_pix_to_fit, boo
         size_t map_size(this->num_last_buf_bin - bin_number);   // initial pix map size (map for pixels from first requested to the last)
         while (num_pix_in_map < num_pix_to_fit) {
             bin_buf_holder.push_back(std::vector<bin_info>(block_size));
-            end_of_pix_reached = this->_read_bins(num_first_bin, bin_buf_holder.back(), last_tmp_bin, this->buf_end);
+            if (this->use_multithreading) {
+                end_of_pix_reached = this->_thread_get_data(num_first_bin, bin_buf_holder.back(), last_tmp_bin, this->buf_end);
+            }
+            else {
+                end_of_pix_reached = this->_read_bins(num_first_bin, bin_buf_holder.back(), last_tmp_bin, this->buf_end);
+            }
             if (this->buf_end != block_size) { // if less then block_size pixels read into the buffer, resize buffer to allocate just buf_end pixels
                 bin_buf_holder.back().resize(buf_end);
             }
 
             num_pix_in_map += bin_buf_holder.back()[buf_end - 1].pix_pos - bin_buf_holder.back()[0].pix_pos + bin_buf_holder.back()[buf_end - 1].num_bin_pixels;
             map_size += buf_end;
-            if (end_of_pix_reached) { // we have read up to the end of the map. Nothing to read now
+            if (end_of_pix_reached || this->read_job_completed) { // we have read up to the end of the map so nothing to read now or
+                // reading process may have been interrupted so we do not actually have data ready
                 break;
-            }
-            else {
+            }else {
                 num_first_bin = last_tmp_bin;
             }
+
         }
         // convert memory map build in the form of the chunked list into the vector form.
         num_pix_in_map = this->_flatten_memory_map(bin_buf_holder, map_size, bin_number);
@@ -450,58 +464,7 @@ size_t pix_mem_map::expand_pix_map(size_t bin_number, size_t num_pix_to_fit, boo
 
 }
 
-
-
-/* read bin info to describe sufficient number of pixels in buffer
-bin number is already in the bin buffer and we want to read additional bins
-describing more pixels  */
-/*
-void pix_mem_map::expand_pixels_selection(size_t bin_number) {
-    if (this->buf_nbin_end == this->nTotalBins) {
-        return;
-    }
-    size_t  num_bin_in_buf = bin_number - this->num_first_buf_bin;
-    // move bin buffer into new position
-    this->num_first_buf_bin = bin_number;
-    this->pix_before_buffer += this->pix_pos_in_buffer[num_bin_in_buf];
-    for (size_t i = num_bin_in_buf; i < this->buf_end; i++) {
-        this->nbin_buffer[i - num_bin_in_buf] = this->nbin_buffer[i];
-    }
-    size_t buf_start = this->buf_end - num_bin_in_buf;
-    size_t buf_nbin_end, buf_end;
-    if (this->use_multithreading) {
-        size_t  num_buf_bins;
-        calc_buf_range(bin_number, buf_start, this->BUF_SIZE_STEP, num_buf_bins, buf_nbin_end, buf_end);
-        if (bin_number + buf_start == this->n_first_rbuf_bin) {
-            std::unique_lock<std::mutex> lock(this->exchange_lock);
-            this->bins_ready.wait(lock, [this]() {return this->nbins_read; });
-            // copy bin info from read buffer to nbin buffer
-            this->bin_read_lock.lock();
-            for (size_t i = 0; i < num_buf_bins; i++) {
-                this->nbin_buffer[buf_start + i] = this->nbin_read_buffer[i];
-            }
-            // set up parameters for next read job on separate thread
-            this->n_first_rbuf_bin = buf_nbin_end;
-            this->nbins_read = false;
-            this->read_bins_needed.notify_one();
-            this->bin_read_lock.unlock();
-
-        }
-        else { // should never happen
-            read_bins(bin_number, buf_start, this->BUF_SIZE_STEP, this->nbin_buffer, buf_nbin_end, buf_end);
-        }
-
-    }
-    else {
-        read_bins(bin_number, this->buf_end - num_bin_in_buf, this->BUF_SIZE_STEP, this->nbin_buffer, buf_nbin_end, buf_end);
-    }
-    record_read_bins(bin_number, buf_nbin_end, buf_end, this->nbin_buffer);
-
-}
-*/
-
-
-
+/**/
 void pix_mem_map::read_bins_job() {
 
     std::unique_lock<std::mutex> lock(this->exchange_lock);
@@ -531,6 +494,7 @@ void pix_mem_map::read_bins_job() {
     }
 }
 
+/**/
 void pix_mem_map::finish_read_bin_job() {
     if (this->use_multithreading) {
         // wait for existing read operation (if any) to finish 

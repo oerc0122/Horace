@@ -38,23 +38,24 @@ public:
     void init(const std::string &full_file_name, size_t bin_start_pos, size_t n_tot_bins, size_t BufferSize, bool use_multithreading);
     /* get number of pixels, stored in the bin and the position of these pixels within pixel array */
     void   get_npix_for_bin(size_t bin_number, size_t &pix_start_num, size_t &num_bin_pix);
-
+    /* expand memory map to accommodate and address the specified number of pixels. Returns maximal number of pixels
+    to fit into buffer addressed by the integer number of bins */
     size_t expand_pix_map(size_t bin_number,size_t num_pix_to_fit, bool &end_of_pix_reached);
+    /* Get information about the bins, stored in memory*/ 
+    void get_map_param(size_t &first_mem_bin,size_t &last_mem_bin, size_t &n_tot_bins)const;
+    /* return number of pixels, described by the map, stored in memory starting from the bin specified */
     size_t num_pix_described(size_t bin_number)const;
-    //size_t num_pix_to_fit(size_t bin_number, size_t buf_size)const;
+
     ~pix_mem_map();
     /* Return number of pixels, stored in file and defined by this memory map*/
     uint64_t num_pix_in_file()const {
-        if (map_capacity_isknown) {
+        if (this->map_capacity_isknown) {
             return this->_numPixInMap;
         }else{
             return std::numeric_limits<uint64_t>::max();
         }
     }
-protected:
-    // the name of the file to process
-    std::string full_file_name;
-
+protected: // for testing
     // EXPOSED FOR TESTING
     bool _read_bins(size_t num_bin,std::vector<bin_info> &buffer,
         size_t &bin_end, size_t &buf_end);
@@ -67,7 +68,10 @@ protected:
     void _thread_query_data(size_t &num_first_bin, size_t &num_last_bin, size_t &buf_end);
     void _thread_request_to_read(size_t start_bin);
 private:
-    bool use_streambuf_direct;
+    // the name of the file to process
+    std::string full_file_name;
+
+    bool use_streambuf_direct; //bin read mode
     size_t num_first_buf_bin,num_last_buf_bin,buf_end; // number of first and last bin stored in memory and number of last bin in the buffer
 
     size_t prebuf_pix_num;                // total number of pixels, stored before the pixels corresponding to the first bin buffer
