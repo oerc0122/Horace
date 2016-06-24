@@ -17,22 +17,26 @@ class sqw_reader
     %
     */
 public:
-    sqw_reader(size_t working_buf_size = 4096);
-    //sqw_reader(const fileParameters &fpar, bool changefileno, bool fileno_provided, size_t working_buf_size = 4096);
+    sqw_reader();
     ~sqw_reader();
     void init(const fileParameters &fpar, bool changefileno, bool fileno_provided, size_t working_buf_size = 4096, int use_multithreading = 0);
     /* return pixel information for the pixels stored in the bin */
     void get_pix_for_bin(size_t bin_number, float *const pix_info, size_t cur_buf_position,
         size_t &pix_start_num, size_t &num_bin_pix, bool position_is_defined = false);
-private:
-    void read_pixels(size_t bin_number, size_t pix_start_num);
 
-    void read_pix_io(size_t pix_start_num, std::vector<float> &pix_buffer, size_t num_pix_to_read);
+    size_t get_npix()const{return _nPixInFile;}
+private:
+    void _update_cash(size_t bin_number, size_t pix_start_num, size_t num_pix_in_bin, float *const pix_info);
+
+    void _read_pix(size_t pix_start_num, float *const pix_buffer, size_t num_pix_to_read);
 
 
     // parameters, which describe file 
     fileParameters fileDescr;
     pix_mem_map pix_map;
+    // number of pixels, stored in the map;
+    size_t _nPixInFile;
+
 
 
     size_t npix_in_buf_start; //= 0;
@@ -59,7 +63,7 @@ private:
     // thread buffer and thread reading operations ;
     std::mutex pix_read_lock, pix_exchange_lock;
     bool use_multithreading_pix, pix_read, pix_read_job_completed;
-    size_t n_first_buf_pix;
+    size_t n_first_threadbuf_pix;
     std::vector<float> thread_pix_buffer;
     std::condition_variable pix_ready, read_pix_needed;
     std::thread read_pix_job_holder;

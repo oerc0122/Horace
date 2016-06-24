@@ -401,7 +401,7 @@ size_t pix_mem_map::_flatten_memory_map(const std::list<std::vector<bin_info> > 
   @returns number of pixels memory map actually describes
   end_of_pix_reached -- sets up to true if no more pixels is defined in the file.
 */
-size_t pix_mem_map::expand_pix_map(size_t bin_number, size_t num_pix_to_fit, bool &end_of_pix_reached) {
+size_t pix_mem_map::check_expand_pix_map(size_t bin_number, size_t num_pix_to_fit, bool &end_of_pix_reached) {
 
     end_of_pix_reached = false;
     size_t pix_start_num, num_pix_in_bin;
@@ -458,7 +458,7 @@ size_t pix_mem_map::expand_pix_map(size_t bin_number, size_t num_pix_to_fit, boo
             this->map_capacity_isknown = true;
             this->_numPixInMap = this->prebuf_pix_num + num_pix_in_map;
         }
-        return expand_pix_map(bin_number, num_pix_to_fit, end_of_pix_reached);
+        return check_expand_pix_map(bin_number, num_pix_to_fit, end_of_pix_reached);
 
     }
 

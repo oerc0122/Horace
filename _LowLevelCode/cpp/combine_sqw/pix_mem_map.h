@@ -40,7 +40,7 @@ public:
     void   get_npix_for_bin(size_t bin_number, size_t &pix_start_num, size_t &num_bin_pix);
     /* expand memory map to accommodate and address the specified number of pixels. Returns maximal number of pixels
     to fit into buffer addressed by the integer number of bins */
-    size_t expand_pix_map(size_t bin_number,size_t num_pix_to_fit, bool &end_of_pix_reached);
+    size_t check_expand_pix_map(size_t bin_number,size_t num_pix_to_fit, bool &end_of_pix_reached);
     /* Get information about the bins, stored in memory*/ 
     void get_map_param(size_t &first_mem_bin,size_t &last_mem_bin, size_t &n_tot_bins)const;
     /* return number of pixels, described by the map, stored in memory starting from the bin specified */
