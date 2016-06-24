@@ -41,6 +41,7 @@ void pix_mem_map::init(const std::string &full_file_name, size_t bin_start_pos, 
     this->num_first_buf_bin = 0;
     this->num_last_buf_bin = 0;
     this->buf_end = 0;
+    this->prebuf_pix_num = 0;
 
     this->finish_read_bin_job();
 
@@ -92,6 +93,7 @@ void pix_mem_map::init(const std::string &full_file_name, size_t bin_start_pos, 
         this->n_first_rbuf_bin = 0;
         this->rbuf_nbin_end = 0;
         this->rbuf_end = 0;
+
 
         this->thread_nbin_buffer.resize(BUF_EXTENSION_STEP);
 
@@ -496,25 +498,24 @@ void pix_mem_map::read_bins_job() {
 
 /**/
 void pix_mem_map::finish_read_bin_job() {
-    if (this->use_multithreading) {
-        // wait for existing read operation (if any) to finish 
-        std::mutex am;
-        std::unique_lock<std::mutex> lock(am);
-        //std::unique_lock<std::mutex> data_ready(this->exchange_lock);
-        this->bins_ready.wait(lock, [this]() {return this->nbins_read; });
-        {
-            std::lock_guard<std::mutex> read_lock(this->bin_read_lock);// lock read operation as thread can be released from more then one place
-            // set up job completion tag
-            this->read_job_completed = true;
-            // finish incomplete read job if it has not been finished naturally
-
-            this->nbins_read = false;
-        }
-        this->read_bins_needed.notify_one();
-
-
-        read_bins_job_holder.join();
+    if (!this->use_multithreading) {
+        return;
     }
+    if (!read_bins_job_holder.joinable()) {
+        return;
+    }
+    {
+        // lock read operation as thread can be released from more then one place
+        std::lock_guard<std::mutex> read_lock(this->bin_read_lock);
+        // set up job completion tag
+        this->read_job_completed = true;
+        // finish incomplete read job if it has not been finished naturally
+
+        this->nbins_read = false;
+    }
+    this->read_bins_needed.notify_one();
+
+    read_bins_job_holder.join();
 
 }
 

@@ -25,10 +25,16 @@ public:
         size_t &pix_start_num, size_t &num_bin_pix, bool position_is_defined = false);
 
     size_t get_npix()const{return _nPixInFile;}
+    void finish_read_job();
+
+    pix_mem_map & get_pix_map(){return pix_map;}
+
 private:
     void _update_cash(size_t bin_number, size_t pix_start_num, size_t num_pix_in_bin, float *const pix_info);
 
-    void _read_pix(size_t pix_start_num, float *const pix_buffer, size_t num_pix_to_read);
+    void _read_pix(size_t pix_start_num, float *const pix_buffer, size_t &num_pix_to_read);
+    void _get_thread_pix_param(size_t &first_thbuf_pix, size_t &last_thbuf_pix, size_t &n_tot_pix);
+    void _get_thread_data(size_t &first_buf_pix, size_t &n_pix_in_buf,std::vector<float> &pixbuf, size_t next_pix_to_read);
 
 
     // parameters, which describe file 
@@ -63,7 +69,7 @@ private:
     // thread buffer and thread reading operations ;
     std::mutex pix_read_lock, pix_exchange_lock;
     bool use_multithreading_pix, pix_read, pix_read_job_completed;
-    size_t n_first_threadbuf_pix;
+    size_t n_first_threadbuf_pix,num_treadbuf_pix;
     std::vector<float> thread_pix_buffer;
     std::condition_variable pix_ready, read_pix_needed;
     std::thread read_pix_job_holder;

@@ -6,26 +6,34 @@
 sqw_reader::sqw_reader() :
     pix_map(),
     _nPixInFile(0),
-    npix_in_buf_start(0), buf_pix_end(0), 
+    npix_in_buf_start(0), buf_pix_end(0),
     PIX_BUF_SIZE(1024), change_fileno(false), fileno(true),
     n_first_threadbuf_pix(0),
     use_multithreading_pix(true), pix_read(false), pix_read_job_completed(false)
 {}
 
 sqw_reader::~sqw_reader() {
-    if (this->use_multithreading_pix) {
-        this->pix_read_lock.lock();
+
+    this->finish_read_job();
+    h_data_file_pix.close();
+}
+void sqw_reader::finish_read_job() {
+    if (!this->use_multithreading_pix) {
+        return;
+    }
+    if (!read_pix_job_holder.joinable()) {
+        return;
+    }
+
+    {
+        std::lock_guard<std::mutex> read_lock(this->pix_read_lock);
 
         this->pix_read_job_completed = true;
         // finish incomplete read job if it has not been finished naturally
         this->pix_read = false;
-        this->read_pix_needed.notify_one();
-        this->pix_read_lock.unlock();
-
-        read_pix_job_holder.join();
     }
-
-    h_data_file_pix.close();
+    this->read_pix_needed.notify_one();
+    read_pix_job_holder.join();
 }
 //
 void sqw_reader::init(const fileParameters &fpar, bool changefileno, bool fileno_provided, size_t pix_buf_size, int multithreading_settings) {
@@ -55,6 +63,7 @@ void sqw_reader::init(const fileParameters &fpar, bool changefileno, bool fileno
     this->fileDescr = fpar;
     if (h_data_file_pix.is_open()) {
         h_data_file_pix.close();
+        finish_read_job();
     }
     _nPixInFile = 0;
     npix_in_buf_start = 0;
@@ -84,28 +93,32 @@ void sqw_reader::init(const fileParameters &fpar, bool changefileno, bool fileno
         std::string error("Can not open file: ");
         error += this->fileDescr.fileName;
         mexErrMsgTxt(error.c_str());
-    } else {
-        this->change_fileno = changefileno;
-        this->fileno = fileno_provided;
-
-        // read number of pixels defined in the file
-        std::streamoff pix_pos = this->fileDescr.pix_start_pos - 8;
-        auto pbuf = h_data_file_pix.rdbuf();
-        pbuf->pubseekpos(pix_pos);
-        char *buffer = reinterpret_cast<char *>(&_nPixInFile);
-        pbuf->sgetn(buffer, 8);
-        if (this->_nPixInFile == 0) {
-            return; // file does not have pixels. 
-        }
-
-
-        if (this->use_multithreading_pix) {
-            this->thread_pix_buffer.resize(PIX_BUF_SIZE*PIX_SIZE);
-            std::thread read_pix([this]() {this->read_pixels_job(); });
-            read_pix_job_holder.swap(read_pix);
-        }
-
     }
+
+    this->change_fileno = changefileno;
+    this->fileno = fileno_provided;
+
+    // read number of pixels defined in the file
+    std::streamoff pix_pos = this->fileDescr.pix_start_pos - 8;
+    auto pbuf = h_data_file_pix.rdbuf();
+    pbuf->pubseekpos(pix_pos);
+    char *buffer = reinterpret_cast<char *>(&_nPixInFile);
+    pbuf->sgetn(buffer, 8);
+    if (this->_nPixInFile == 0) {
+        return; // file does not have pixels. 
+    }
+
+
+    if (this->use_multithreading_pix) {
+        this->thread_pix_buffer.resize(PIX_BUF_SIZE*PIX_SIZE);
+        this->n_first_threadbuf_pix = 0;
+        this->num_treadbuf_pix = 0;
+
+        std::thread read_pix([this]() {this->read_pixels_job(); });
+        read_pix_job_holder.swap(read_pix);
+    }
+
+
 }
 
 
@@ -134,21 +147,21 @@ void sqw_reader::get_pix_for_bin(size_t bin_number, float *const pix_info, size_
     if (num_bin_pix == 0) return;
 
     if (pix_start_num < this->npix_in_buf_start || pix_start_num + num_bin_pix > this->buf_pix_end) {
-        this->_update_cash(bin_number, pix_start_num, num_bin_pix,pix_info+ out_buf_start);
+        this->_update_cash(bin_number, pix_start_num, num_bin_pix, pix_info + out_buf_start);
     }
-    if (!this->use_streambuf_direct){ // copy data from buffer to the destination
+    if (!this->use_streambuf_direct) { // copy data from buffer to the destination
         size_t in_buf_start = (pix_start_num - this->npix_in_buf_start)*PIX_SIZE;
         for (size_t i = 0; i < num_bin_pix*PIX_SIZE; i++) {
-            pix_info[out_buf_start + i] = pix_buffer[in_buf_start + i];
+            pix_info[out_buf_start + i] = this->pix_buffer[in_buf_start + i];
         }
     }
 }
 /*
- read pixels information, located in the bin with the number requested
+ read pixels information, corresponding to the bin with the number requested
 
- read either all pixels in the buffer or at least the number specified
+ either fill the buffer (read data into it) or at least read the number specified (depending on the use_streambuf_direct switch)
 */
-void sqw_reader::_update_cash(size_t bin_number, size_t pix_start_num,size_t num_pix_in_bin, float *const pix_info) {
+void sqw_reader::_update_cash(size_t bin_number, size_t pix_start_num, size_t num_pix_in_bin, float *const pix_info) {
 
     //check if we have loaded enough bin information to read enough
     //pixels and return enough pixels to fill - in buffer.Expand or
@@ -158,86 +171,134 @@ void sqw_reader::_update_cash(size_t bin_number, size_t pix_start_num,size_t num
     size_t num_pix_to_read;
     if (use_streambuf_direct) {
         num_pix_to_read = num_pix_in_bin;
-    } else {
+    }
+    else {
         size_t pix_buf_size;
         bool end_of_pixmap_reached;
         //check_binInfo_loaded_(bin_number, true, pix_start_num);
-        if (this->use_streambuf_direct ) {
+        if (this->use_streambuf_direct) {
             pix_buf_size = num_pix_in_bin;
-        }else{
-            pix_buf_size = this->pix_buffer.size()/ PIX_SIZE;
+        }
+        else {
+            pix_buf_size = this->pix_buffer.size() / PIX_SIZE;
         }
         num_pix_to_read = this->pix_map.check_expand_pix_map(bin_number, pix_buf_size, end_of_pixmap_reached);
     }
-
+    size_t num_pix_in_buffer;
     if (this->use_multithreading_pix) {
-
-        std::unique_lock<std::mutex> lock(this->pix_exchange_lock);
-        this->pix_ready.wait(lock, [this]() {return this->pix_read; });
-        if (this->pix_read_job_completed) {
-            this->pix_read = false;
-            this->read_pix_needed.notify_one();
-            return;
+        if (num_pix_to_read*PIX_SIZE > this->thread_pix_buffer.size()) {
+            thread_pix_buffer.resize(num_pix_to_read*PIX_SIZE);
         }
-
-        this->thread_pix_buffer.swap(this->pix_buffer);
-        this->n_first_threadbuf_pix = pix_start_num + num_pix_to_read;
-        this->pix_read = false;
-        this->read_pix_needed.notify_one();
+        size_t first_thbuf_pix, last_thbuf_pix, n_thrbuf_pix;
+        this->_get_thread_pix_param(first_thbuf_pix, last_thbuf_pix, n_thrbuf_pix);
+        if (pix_start_num>= first_thbuf_pix && pix_start_num+ num_pix_in_bin<last_thbuf_pix) {
+            size_t next_pix_to_read = pix_start_num+ num_pix_to_read;
+            this->_get_thread_data(pix_start_num, num_pix_in_buffer,pix_buffer, next_pix_to_read);
+            // buffer always read to full capacity but we drop incomplete bin
+            num_pix_in_buffer = num_pix_to_read;
+        }else { // Cash missed. instruct thread to get next portion of data but read proper data piece manually.
+            if (num_pix_in_bin*PIX_SIZE > pix_buffer.size()) {
+                pix_buffer.resize(num_pix_in_bin*PIX_SIZE);
+            }
+            size_t next_pix_to_read = pix_start_num + num_pix_in_bin;
+            size_t wrong_start_num,wrong_pix_in_buf;
+            this->_get_thread_data(wrong_start_num, wrong_pix_in_buf, pix_buffer, next_pix_to_read);
+            //
+            std::lock_guard<std::mutex> read_lock(this->pix_read_lock);
+            this->_read_pix(pix_start_num, &pix_buffer[0], num_pix_in_bin);
+            num_pix_in_buffer = num_pix_in_bin;
+        }
 
     }
     else {
         if (use_streambuf_direct) {
             this->_read_pix(pix_start_num, pix_info, num_pix_to_read);
-        } else {
+            num_pix_in_buffer = num_pix_to_read;
+        }
+        else {
             if (this->pix_buffer.size() < num_pix_to_read*PIX_SIZE) {
                 this->pix_buffer.resize(num_pix_to_read*PIX_SIZE);
             }
             this->_read_pix(pix_start_num, &pix_buffer[0], num_pix_to_read);
+            num_pix_in_buffer = num_pix_to_read;
         }
 
     }
     this->npix_in_buf_start = pix_start_num;
-    this->buf_pix_end = this->npix_in_buf_start + num_pix_to_read;
+    this->buf_pix_end = this->npix_in_buf_start + num_pix_in_buffer;
+
+
+}
+void sqw_reader::_get_thread_pix_param(size_t &first_thbuf_pix, size_t &last_thbuf_pix, size_t &n_buf_pix){
+
+    std::unique_lock<std::mutex> lock(this->pix_exchange_lock);
+    this->pix_ready.wait(lock, [this]() {return this->pix_read; });
+
+    std::lock_guard<std::mutex> read_lock(this->pix_read_lock);
+    first_thbuf_pix = this->n_first_threadbuf_pix;
+    n_buf_pix       = this->num_treadbuf_pix;
+    last_thbuf_pix  = first_thbuf_pix+ n_buf_pix;
+
+}
+/* Get thread data and instruct thread to read next part of the pixel information*/
+void sqw_reader::_get_thread_data(size_t &first_buf_pix, size_t &n_pix_in_buf, std::vector<float> &pixbuf, size_t next_pix_to_read) {
+    //
+    std::unique_lock<std::mutex> lock(this->pix_exchange_lock);
+    this->pix_ready.wait(lock, [this]() {return this->pix_read; });
+    {
+        std::lock_guard<std::mutex> read_lock(this->pix_read_lock);
+        if (this->pix_read_job_completed) {
+            this->pix_read = false;
+            this->read_pix_needed.notify_one();
+            return;
+        }
+        first_buf_pix = this->n_first_threadbuf_pix;
+        n_pix_in_buf  = this->num_treadbuf_pix;
+        this->thread_pix_buffer.swap(this->pix_buffer);
+        this->n_first_threadbuf_pix = next_pix_to_read;
+        this->pix_read = false;
+    }
+    this->read_pix_needed.notify_one();
 
 
 }
 //
 
 void sqw_reader::read_pixels_job() {
-    /*
+
     std::unique_lock<std::mutex> lock(this->pix_exchange_lock);
 
     while (!this->pix_read_job_completed) {
         this->read_pix_needed.wait(lock, [this]() {return !this->pix_read; });
-        if (this->pix_read_job_completed) {
+        {
+            std::lock_guard<std::mutex> read_lock(this->pix_read_lock);
+
+            if (this->pix_read_job_completed) {
+                this->pix_read = true;
+                this->pix_ready.notify_one();
+                break;
+            }
+
+            size_t n_pix_to_read = thread_pix_buffer.size()/PIX_SIZE;
+            if (this->n_first_threadbuf_pix + n_pix_to_read >= this->_nPixInFile) {
+                n_pix_to_read = this->_nPixInFile - this->n_first_threadbuf_pix;
+            }
+
+            if (n_pix_to_read > 0) {
+                this->_read_pix(this->n_first_threadbuf_pix, &thread_pix_buffer[0], n_pix_to_read);
+            }
+            this->num_treadbuf_pix = n_pix_to_read;
             this->pix_read = true;
-            this->pix_ready.notify_one();
-            break;
         }
-
-        this->pix_read_lock.lock();
-        size_t n_pix_to_read = PIX_BUF_SIZE;
-        if (this->n_first_buf_pix + n_pix_to_read >= this->max_num_of_pixels) {
-            n_pix_to_read = this->max_num_of_pixels - this->n_first_buf_pix;
-        }
-
-        if (n_pix_to_read > 0) {
-            read_pix_io(this->n_first_buf_pix, thread_pix_buffer, n_pix_to_read);
-        }
-
-        this->pix_read = true;
-        this->pix_read_lock.unlock();
-
         this->pix_ready.notify_one();
     }
-    */
+
 }
 
 
 
 /* Read specified number of pixels into the pixel buffer provided */
-void sqw_reader::_read_pix(size_t pix_start_num, float *const pix_buffer, size_t num_pix_to_read) {
+void sqw_reader::_read_pix(size_t pix_start_num, float *const pix_buffer, size_t &num_pix_to_read) {
 
 
     if (pix_start_num + num_pix_to_read > this->_nPixInFile) {
@@ -260,7 +321,7 @@ void sqw_reader::_read_pix(size_t pix_start_num, float *const pix_buffer, size_t
     if (this->change_fileno) {
         for (size_t i = 0; i < num_pix_to_read; i++) {
             if (fileno) {
-                *(pix_buffer+4 + i * 9)   = float(this->fileDescr.file_id);
+                *(pix_buffer + 4 + i * 9) = float(this->fileDescr.file_id);
             }
             else {
                 *(pix_buffer + 4 + i * 9) += float(this->fileDescr.file_id);

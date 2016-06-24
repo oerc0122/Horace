@@ -79,6 +79,77 @@ public:
 
         data_file_bin.close();
     }
+    void test_sqw_reader_read_all() {
+
+        sqw_reader reader;
+        fileParameters file_par;
+        file_par.fileName = test_file_name;
+        file_par.file_id = 0;
+        file_par.nbin_start_pos = bin_pos_in_file;
+        file_par.pix_start_pos = pix_pos_in_file;
+        file_par.total_NfileBins = num_bin_in_file;
+        std::vector<float> pix_buffer;
+        pix_buffer.resize(this->pixels.size());
+        float *pPix_info = &pix_buffer[0];
+
+
+        size_t start_buf_pos(0), pix_start_num, num_bin_pix;
+        //--------------------------------------------------------------------------------------------
+        reader.init(file_par, false, false, 512, 1);
+
+        auto t_start = std::chrono::steady_clock::now();
+        start_buf_pos = 0;
+        for (size_t i = 0; i < this->num_bin_in_file; i++) {
+            reader.get_pix_for_bin(i, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
+            start_buf_pos += num_bin_pix;
+        }
+        auto t_end = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - t_start).count();
+        std::cout<<"\n Time to run threads: "<< t_end << "ms\n";
+
+        for (size_t i = 0; i < pix_buffer.size(); i++) {
+            TS_ASSERT_EQUALS(pix_buffer[i], pixels[i]);
+            pix_buffer[i] = 0;
+        }
+
+        //--------------------------------------------------------------------------------------------
+        reader.init(file_par, false, false, 0);
+        //
+        t_start = std::chrono::steady_clock::now();
+        start_buf_pos = 0;
+        for (size_t i = 0; i < this->num_bin_in_file; i++) {
+            reader.get_pix_for_bin(i, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
+            start_buf_pos += num_bin_pix;
+        }
+        t_end = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - t_start).count();
+        std::cout << " Time to run single thread with system buffer: " << t_end << "ms\n";
+
+        for (size_t i = 0; i < pix_buffer.size(); i++) {
+            TS_ASSERT_EQUALS(pix_buffer[i], pixels[i]);
+            pix_buffer[i] = 0;
+        }
+        //--------------------------------------------------------------------------------------------
+        //
+        reader.init(file_par, false, false, 1024);
+        //
+        t_start = std::chrono::steady_clock::now();
+        start_buf_pos = 0;
+        for (size_t i = 0; i < this->num_bin_in_file; i++) {
+            reader.get_pix_for_bin(i, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
+            start_buf_pos += num_bin_pix;
+        }
+        t_end = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - t_start).count();
+        std::cout << " Time to run single thread with 1024 words buffer: " << t_end << "ms\n";
+
+
+        for (size_t i = 0; i < pix_buffer.size(); i++) {
+            TS_ASSERT_EQUALS(pix_buffer[i], pixels[i]);
+            pix_buffer[i] = 0;
+        }
+
+    }
     void test_read_nbins() {
         pix_map_tester pix_map;
 
@@ -505,49 +576,49 @@ public:
 
             TS_ASSERT(initialized);
 
-            size_t pix_start_num, num_bin_pix,tart_buf_pos(0);
+            size_t pix_start_num, num_bin_pix,start_buf_pos(0);
             std::vector<float> pix_buffer(9*1000);
             float *pPix_info = &pix_buffer[0];
 
-            reader.get_pix_for_bin(0,pPix_info, tart_buf_pos,pix_start_num,num_bin_pix,false);
+            reader.get_pix_for_bin(0,pPix_info, start_buf_pos,pix_start_num,num_bin_pix,false);
             TS_ASSERT_EQUALS(pix_start_num,0);
             TS_ASSERT_EQUALS(num_bin_pix, 3);
             for(size_t i=0;i<num_bin_pix *9;i++){
                 TS_ASSERT_EQUALS(pixels[pix_start_num*9+i], pix_buffer[i]);
             }
             // pix buffer have not changed at all
-            reader.get_pix_for_bin(127, pPix_info, tart_buf_pos, pix_start_num, num_bin_pix, false);
+            reader.get_pix_for_bin(127, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
             TS_ASSERT_EQUALS(pix_start_num, 338);
             TS_ASSERT_EQUALS(num_bin_pix, 0);
 
-            reader.get_pix_for_bin(126, pPix_info, tart_buf_pos, pix_start_num, num_bin_pix, false);
+            reader.get_pix_for_bin(126, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
             TS_ASSERT_EQUALS(pix_start_num, 334);
             TS_ASSERT_EQUALS(num_bin_pix, 4);
             for (size_t i = 0; i<num_bin_pix * 9; i++) {
                 TS_ASSERT_EQUALS(pixels[pix_start_num*9+i], pix_buffer[i]);
             }
-            tart_buf_pos = 5;
-            reader.get_pix_for_bin(num_bin_in_file-860, pPix_info, tart_buf_pos, pix_start_num, num_bin_pix, false);
+            start_buf_pos = 5;
+            reader.get_pix_for_bin(num_bin_in_file-860, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
             TS_ASSERT_EQUALS(pix_start_num, sample_pix_pos[num_bin_in_file - 860]);
             TS_ASSERT_EQUALS(num_bin_pix, sample_npix[num_bin_in_file - 860]);
             for (size_t i = 0; i<num_bin_pix * 9; i++) {
-                TS_ASSERT_EQUALS(pixels[pix_start_num * 9 + i], pix_buffer[tart_buf_pos*9 + i]);
+                TS_ASSERT_EQUALS(pixels[pix_start_num * 9 + i], pix_buffer[start_buf_pos*9 + i]);
             }
-            reader.get_pix_for_bin(num_bin_in_file - 860+1, pPix_info, tart_buf_pos, pix_start_num, num_bin_pix, false);
+            reader.get_pix_for_bin(num_bin_in_file - 860+1, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
             TS_ASSERT_EQUALS(pix_start_num, sample_pix_pos[num_bin_in_file - 860+1]);
             TS_ASSERT_EQUALS(num_bin_pix, sample_npix[num_bin_in_file - 860+1]);
             for (size_t i = 0; i<num_bin_pix * 9; i++) {
-                TS_ASSERT_EQUALS(pixels[pix_start_num * 9 + i], pix_buffer[tart_buf_pos * 9 + i]);
+                TS_ASSERT_EQUALS(pixels[pix_start_num * 9 + i], pix_buffer[start_buf_pos * 9 + i]);
             }
 
 
 
-            tart_buf_pos = 2;
-            reader.get_pix_for_bin(num_bin_in_file - 1, pPix_info, tart_buf_pos, pix_start_num, num_bin_pix, false);
+            start_buf_pos = 2;
+            reader.get_pix_for_bin(num_bin_in_file - 1, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
             TS_ASSERT_EQUALS(pix_start_num, sample_pix_pos[num_bin_in_file - 1]);
             TS_ASSERT_EQUALS(num_bin_pix, sample_npix[num_bin_in_file - 1]);
             for (size_t i = 0; i<num_bin_pix * 9; i++) {
-                TS_ASSERT_EQUALS(pixels[pix_start_num * 9 + i], pix_buffer[tart_buf_pos * 9 + i]);
+                TS_ASSERT_EQUALS(pixels[pix_start_num * 9 + i], pix_buffer[start_buf_pos * 9 + i]);
             }
 
          }
@@ -569,61 +640,59 @@ public:
 
             TS_ASSERT(initialized);
 
-            size_t pix_start_num, num_bin_pix, tart_buf_pos(0);
+            size_t pix_start_num, num_bin_pix, start_buf_pos(0);
             std::vector<float> pix_buffer(9 * 1000);
             float *pPix_info = &pix_buffer[0];
 
-            reader.get_pix_for_bin(0, pPix_info, tart_buf_pos, pix_start_num, num_bin_pix, false);
+            reader.get_pix_for_bin(0, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
             TS_ASSERT_EQUALS(pix_start_num, 0);
             TS_ASSERT_EQUALS(num_bin_pix, 3);
             for (size_t i = 0; i<num_bin_pix * 9; i++) {
                 TS_ASSERT_EQUALS(pixels[pix_start_num * 9 + i], pix_buffer[i]);
             }
             // pix buffer have not changed at all
-            reader.get_pix_for_bin(127, pPix_info, tart_buf_pos, pix_start_num, num_bin_pix, false);
+            reader.get_pix_for_bin(127, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
             TS_ASSERT_EQUALS(pix_start_num, 338);
             TS_ASSERT_EQUALS(num_bin_pix, 0);
 
-            reader.get_pix_for_bin(126, pPix_info, tart_buf_pos, pix_start_num, num_bin_pix, false);
+            reader.get_pix_for_bin(126, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
             TS_ASSERT_EQUALS(pix_start_num, 334);
             TS_ASSERT_EQUALS(num_bin_pix, 4);
             for (size_t i = 0; i<num_bin_pix * 9; i++) {
                 TS_ASSERT_EQUALS(pixels[pix_start_num * 9 + i], pix_buffer[i]);
             }
-            tart_buf_pos = 5;
-            reader.get_pix_for_bin(num_bin_in_file - 860, pPix_info, tart_buf_pos, pix_start_num, num_bin_pix, false);
+            start_buf_pos = 5;
+            reader.get_pix_for_bin(num_bin_in_file - 860, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
             TS_ASSERT_EQUALS(pix_start_num, sample_pix_pos[num_bin_in_file - 860]);
             TS_ASSERT_EQUALS(num_bin_pix, sample_npix[num_bin_in_file - 860]);
             for (size_t i = 0; i<num_bin_pix * 9; i++) {
-                TS_ASSERT_EQUALS(pixels[pix_start_num * 9 + i], pix_buffer[tart_buf_pos * 9 + i]);
+                TS_ASSERT_EQUALS(pixels[pix_start_num * 9 + i], pix_buffer[start_buf_pos * 9 + i]);
             }
 
-            reader.get_pix_for_bin(num_bin_in_file - 860 + 1, pPix_info, tart_buf_pos, pix_start_num, num_bin_pix, false);
+            reader.get_pix_for_bin(num_bin_in_file - 860 + 1, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
             TS_ASSERT_EQUALS(pix_start_num, sample_pix_pos[num_bin_in_file - 860 + 1]);
             TS_ASSERT_EQUALS(num_bin_pix, sample_npix[num_bin_in_file - 860 + 1]);
             for (size_t i = 0; i<num_bin_pix * 9; i++) {
-                TS_ASSERT_EQUALS(pixels[pix_start_num * 9 + i], pix_buffer[tart_buf_pos * 9 + i]);
+                TS_ASSERT_EQUALS(pixels[pix_start_num * 9 + i], pix_buffer[start_buf_pos * 9 + i]);
             }
 
-            tart_buf_pos = 2;
-            reader.get_pix_for_bin(num_bin_in_file - 1, pPix_info, tart_buf_pos, pix_start_num, num_bin_pix, false);
+            start_buf_pos = 2;
+            reader.get_pix_for_bin(num_bin_in_file - 1, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
             TS_ASSERT_EQUALS(pix_start_num, sample_pix_pos[num_bin_in_file - 1]);
             TS_ASSERT_EQUALS(num_bin_pix, sample_npix[num_bin_in_file - 1]);
             for (size_t i = 0; i<num_bin_pix * 9; i++) {
-                TS_ASSERT_EQUALS(pixels[pix_start_num * 9 + i], pix_buffer[tart_buf_pos * 9 + i]);
+                TS_ASSERT_EQUALS(pixels[pix_start_num * 9 + i], pix_buffer[start_buf_pos * 9 + i]);
             }
 
         }
-
-
-        /*
-        void xest_sqw_reader_propagate_pix_multi() {
-            sqw_reader reader(128);
+        //
+        void test_sqw_reader_propagate_pix_threads() {
+            sqw_reader reader;
             fileParameters file_par;
-            file_par.fileName = "d:/Data/svn/Horace/_test/test_symmetrisation/w3d_sqw.sqw";
+            file_par.fileName = test_file_name;
             file_par.file_id = 0;
-            file_par.nbin_start_pos = 5194471;
-            file_par.pix_start_pos = 8973651;
+            file_par.nbin_start_pos = bin_pos_in_file;
+            file_par.pix_start_pos = pix_pos_in_file;
             file_par.total_NfileBins = num_bin_in_file;
             bool initialized(false);
             try {
@@ -634,27 +703,58 @@ public:
 
             TS_ASSERT(initialized);
 
-            size_t pix_start_num, num_bin_pix, tart_buf_pos(0);
+            size_t pix_start_num, num_bin_pix, start_buf_pos(0);
             std::vector<float> pix_buffer(9 * 1000);
             float *pPix_info = &pix_buffer[0];
 
-            reader.get_pix_for_bin(0, pPix_info, tart_buf_pos, pix_start_num, num_bin_pix, false);
+            reader.get_pix_for_bin(0, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
             TS_ASSERT_EQUALS(pix_start_num, 0);
             TS_ASSERT_EQUALS(num_bin_pix, 3);
+            for (size_t i = 0; i<num_bin_pix * 9; i++) {
+                TS_ASSERT_EQUALS(pixels[pix_start_num * 9 + i], pix_buffer[i]);
+            }
             // pix buffer have not changed at all
-            reader.get_pix_for_bin(127, pPix_info, tart_buf_pos, pix_start_num, num_bin_pix, false);
+            reader.get_pix_for_bin(127, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
             TS_ASSERT_EQUALS(pix_start_num, 338);
             TS_ASSERT_EQUALS(num_bin_pix, 0);
 
-            reader.get_pix_for_bin(126, pPix_info, tart_buf_pos, pix_start_num, num_bin_pix, false);
+            reader.get_pix_for_bin(126, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
             TS_ASSERT_EQUALS(pix_start_num, 334);
             TS_ASSERT_EQUALS(num_bin_pix, 4);
+            for (size_t i = 0; i<num_bin_pix * 9; i++) {
+                TS_ASSERT_EQUALS(pixels[pix_start_num * 9 + i], pix_buffer[i]);
+            }
+            start_buf_pos = 5;
+            reader.get_pix_for_bin(num_bin_in_file - 860, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
+            TS_ASSERT_EQUALS(pix_start_num, sample_pix_pos[num_bin_in_file - 860]);
+            TS_ASSERT_EQUALS(num_bin_pix, sample_npix[num_bin_in_file - 860]);
+            for (size_t i = 0; i<num_bin_pix * 9; i++) {
+                TS_ASSERT_EQUALS(pixels[pix_start_num * 9 + i], pix_buffer[start_buf_pos * 9 + i]);
+            }
+            reader.get_pix_for_bin(num_bin_in_file - 860 + 1, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
+            TS_ASSERT_EQUALS(pix_start_num, sample_pix_pos[num_bin_in_file - 860 + 1]);
+            TS_ASSERT_EQUALS(num_bin_pix, sample_npix[num_bin_in_file - 860 + 1]);
+            for (size_t i = 0; i<num_bin_pix * 9; i++) {
+                TS_ASSERT_EQUALS(pixels[pix_start_num * 9 + i], pix_buffer[start_buf_pos * 9 + i]);
+            }
 
-            reader.get_npix_for_bin(256, pix_start_num, num_bin_pix);
-            TS_ASSERT_EQUALS(pix_start_num, 678);
-            TS_ASSERT_EQUALS(num_bin_pix, 0);
+
+
+            start_buf_pos = 2;
+            reader.get_pix_for_bin(num_bin_in_file - 1, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
+            TS_ASSERT_EQUALS(pix_start_num, sample_pix_pos[num_bin_in_file - 1]);
+            TS_ASSERT_EQUALS(num_bin_pix, sample_npix[num_bin_in_file - 1]);
+            for (size_t i = 0; i<num_bin_pix * 9; i++) {
+                TS_ASSERT_EQUALS(pixels[pix_start_num * 9 + i], pix_buffer[start_buf_pos * 9 + i]);
+            }
 
         }
+
+
+
+
+        /*
+   
 
         void xest_reader_propagate_pix_multi() {
             std::vector<sqw_reader> reader_noThread(1);
