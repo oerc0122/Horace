@@ -104,3 +104,9 @@ public:
  void runTest() { if ( suite_TestCombineSQW ) suite_TestCombineSQW->test_sqw_reader_read_all(); }
 } testDescription_suite_TestCombineSQW_test_sqw_reader_read_all;
 
+static class TestDescription_suite_TestCombineSQW_test_mxsqw_reader_propagate_pix_multi : public CxxTest::RealTestDescription {
+public:
+ TestDescription_suite_TestCombineSQW_test_mxsqw_reader_propagate_pix_multi() : CxxTest::RealTestDescription( Tests_TestCombineSQW, suiteDescription_TestCombineSQW, 769, "test_mxsqw_reader_propagate_pix_multi" ) {}
+ void runTest() { if ( suite_TestCombineSQW ) suite_TestCombineSQW->test_mxsqw_reader_propagate_pix_multi(); }
+} testDescription_suite_TestCombineSQW_test_mxsqw_reader_propagate_pix_multi;
+

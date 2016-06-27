@@ -171,6 +171,8 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\combine_sqw.cpp" />
+    <ClCompile Include="..\nsqw_pix_reader.cpp" />
     <ClCompile Include="..\pix_mem_map.cpp" />
     <ClCompile Include="..\exchange_buffer.cpp" />
     <ClCompile Include="..\fileParameters.cpp" />

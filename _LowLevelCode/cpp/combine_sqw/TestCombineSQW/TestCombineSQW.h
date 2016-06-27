@@ -749,35 +749,31 @@ public:
                 pix_buffer[i] = 0;
             }
 
-            //--------------------------------------------------------------------------------------------
-            reader.init(file_par, false, false, 0);
-            //
-            t_start = std::chrono::steady_clock::now();
-            start_buf_pos = 0;
-            for (size_t i = 0; i < this->num_bin_in_file; i++) {
-                reader.get_pix_for_bin(i, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
-                start_buf_pos += num_bin_pix;
-            }
-            t_end = std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now() - t_start).count();
-            std::cout << "\n Time to run single thread with system buffer: " << t_end << "ms\n";
+            ////--------------------------------------------------------------------------------------------
+            //reader.init(file_par, false, false, 0);
+            ////
+            //t_start = std::chrono::steady_clock::now();
+            //start_buf_pos = 0;
+            //for (size_t i = 0; i < this->num_bin_in_file; i++) {
+            //    reader.get_pix_for_bin(i, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
+            //    start_buf_pos += num_bin_pix;
+            //}
+            //t_end = std::chrono::duration_cast<std::chrono::milliseconds>(
+            //    std::chrono::steady_clock::now() - t_start).count();
+            //std::cout << "\n Time to run single thread with system buffer: " << t_end << "ms\n";
 
 
         }
 
 
-
-        /*
-   
-
-        void xest_reader_propagate_pix_multi() {
+        void test_mxsqw_reader_propagate_pix_multi() {
             std::vector<sqw_reader> reader_noThread(1);
 
             fileParameters file_par;
-            file_par.fileName = "d:/Data/svn/Horace/_test/test_symmetrisation/w3d_sqw.sqw";
+            file_par.fileName = test_file_name;
             file_par.file_id = 0;
-            file_par.nbin_start_pos = 5194471;
-            file_par.pix_start_pos = 8973651;
+            file_par.nbin_start_pos = bin_pos_in_file;
+            file_par.pix_start_pos  = pix_pos_in_file;
             file_par.total_NfileBins = num_bin_in_file;
             bool initialized(false);
             try {
@@ -849,5 +845,5 @@ public:
             }
 
         }
-        */
+
 };

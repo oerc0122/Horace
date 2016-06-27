@@ -44,7 +44,9 @@ catch ME
     
 end
 try
-   mex_single([cpp_in_rel_dir 'combine_sqw'], out_rel_dir,'combine_sqw.cpp');
+   cof = {'combine_sqw.cpp','exchange_buffer.cpp','fileParameters.cpp',...
+       'pix_mem_map.cpp', 'sqw_pix_writer.cpp', 'sqw_reader.cpp', 'nsqw_pix_reader.cpp'};
+   mex_single([cpp_in_rel_dir 'combine_sqw'], out_rel_dir,cof{:} );
    disp('**********> Succesfully created mex file for combining components from C++')   
 catch ME
     message=ME.message;

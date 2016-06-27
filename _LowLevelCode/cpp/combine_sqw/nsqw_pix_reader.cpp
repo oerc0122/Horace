@@ -51,7 +51,7 @@ void nsqw_pix_reader::read_pix_info(size_t &n_buf_pixels, size_t &n_bins_process
         size_t cell_pix = 0;
 
         for (size_t i = 0; i < n_files; i++) {
-            fileReaders[i].get_npix_for_bin(n_bin, pix_start_num, npix);
+            fileReaders[i].get_pix_map().get_npix_for_bin(n_bin, pix_start_num, npix);
             cell_pix += npix;
         }
 

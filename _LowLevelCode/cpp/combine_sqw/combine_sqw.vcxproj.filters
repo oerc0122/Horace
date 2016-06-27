@@ -33,6 +33,9 @@
     <ClInclude Include="nsqw_pix_reader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="pix_mem_map.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="combine_sqw.cpp">
@@ -51,6 +54,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="nsqw_pix_reader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="pix_mem_map.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
