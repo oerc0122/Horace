@@ -98,7 +98,7 @@ end
 fnames = varargin(:);
 nFiles   = numel(fnames);% files go in varargin
 add_fNames = cellfun(@(x)[x,' '],fnames,'UniformOutput',false);
-add_files  = cellfun(@(x)[fullfile(curr_dir,in_rel_dir,x),' '],fnames,'UniformOutput',false);
+add_files  = cellfun(@(x)(fullfile(curr_dir,in_rel_dir,x)),fnames,'UniformOutput',false);
 outdir = fullfile(curr_dir,out_rel_dir);
 
 short_fname = cell2str(add_fNames{1});
@@ -110,11 +110,9 @@ end
 if(nFiles==1)
     fname      = strtrim(add_files{1});
     mex(fname, '-outdir', outdir);
-else
-    flname1 = strtrim(add_files{1});
-    flname2 =  strtrim(cell2str(add_files(2:end)));
-    
-    mex(flname1,flname2, '-outdir', outdir);
+else  
+    %mex('-v',add_files{:}, '-outdir', outdir);
+     mex(add_files{:}, '-outdir', outdir);    
 end
 
 function access =check_access(outdir,filename)
