@@ -53,7 +53,7 @@ private:
     std::ifstream h_data_file_pix;
 
 
-                                   // number of pixels to read in pix buffer
+   // number of pixels to read in pix buffer
     size_t PIX_BUF_SIZE;
     //Boolean indicating that the id, which specify pixel run number should be modified
     bool change_fileno;

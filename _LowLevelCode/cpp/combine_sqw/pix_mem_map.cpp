@@ -400,7 +400,7 @@ size_t pix_mem_map::_flatten_memory_map(const std::list<std::vector<bin_info> > 
   bin_number      -- current bin number to start estimate
   num_pix_to_fit  -- number of pixels to verify memory map for
  *Output:
-  @returns number of pixels memory map actually describes
+  @returns number of pixels memory map describes after the current element
   end_of_pix_reached -- sets up to true if no more pixels is defined in the file.
 */
 size_t pix_mem_map::check_expand_pix_map(size_t bin_number, size_t num_pix_to_fit, bool &end_of_pix_reached) {
@@ -417,8 +417,11 @@ size_t pix_mem_map::check_expand_pix_map(size_t bin_number, size_t num_pix_to_fi
         return num_pix_in_map;
     }
     else if (num_pix_in_map > num_pix_to_fit) {// find 
-        auto first_out = std::lower_bound(this->nbin_buffer.begin(), this->nbin_buffer.end(), num_pix_to_fit, comp_fun);
-        return (first_out->pix_pos);
+        size_t  num_bin_in_buf = bin_number - this->num_first_buf_bin;
+        size_t  num_pix_before_bin = this->nbin_buffer[num_bin_in_buf].pix_pos;
+        auto pEnd = this->nbin_buffer.begin() + (this->num_last_buf_bin - this->num_first_buf_bin );
+        auto first_out = std::lower_bound(this->nbin_buffer.begin()+ num_bin_in_buf,pEnd, num_pix_to_fit+ num_pix_before_bin, comp_fun);
+        return (first_out->pix_pos- num_pix_before_bin);
     }
     else {
         if (this->map_capacity_isknown) { // we have read the whole memory map.

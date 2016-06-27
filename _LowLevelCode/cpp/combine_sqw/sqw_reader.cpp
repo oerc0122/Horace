@@ -34,6 +34,7 @@ void sqw_reader::finish_read_job() {
     }
     this->read_pix_needed.notify_one();
     read_pix_job_holder.join();
+    this->use_multithreading_pix = false;
 }
 //
 void sqw_reader::init(const fileParameters &fpar, bool changefileno, bool fileno_provided, size_t pix_buf_size, int multithreading_settings) {
@@ -192,13 +193,13 @@ void sqw_reader::_update_cash(size_t bin_number, size_t pix_start_num, size_t nu
         size_t first_thbuf_pix, last_thbuf_pix, n_thrbuf_pix;
         this->_get_thread_pix_param(first_thbuf_pix, last_thbuf_pix, n_thrbuf_pix);
         if (pix_start_num>= first_thbuf_pix && pix_start_num+ num_pix_in_bin<last_thbuf_pix) {
-            size_t next_pix_to_read = pix_start_num+ num_pix_to_read;
-            this->_get_thread_data(pix_start_num, num_pix_in_buffer,pix_buffer, next_pix_to_read);
+            size_t next_thr_pix_to_read = pix_start_num+ num_pix_to_read;
+            this->_get_thread_data(pix_start_num, num_pix_in_buffer,pix_buffer, next_thr_pix_to_read);
             // buffer always read to full capacity but we drop incomplete bin
             num_pix_in_buffer = num_pix_to_read;
         }else { // Cash missed. instruct thread to get next portion of data but read proper data piece manually.
             if (num_pix_in_bin*PIX_SIZE > pix_buffer.size()) {
-                pix_buffer.resize(num_pix_in_bin*PIX_SIZE);
+                pix_buffer.resize((num_pix_in_bin+1)*PIX_SIZE);
             }
             size_t next_pix_to_read = pix_start_num + num_pix_in_bin;
             size_t wrong_start_num,wrong_pix_in_buf;
@@ -227,7 +228,6 @@ void sqw_reader::_update_cash(size_t bin_number, size_t pix_start_num, size_t nu
     this->npix_in_buf_start = pix_start_num;
     this->buf_pix_end = this->npix_in_buf_start + num_pix_in_buffer;
 
-
 }
 void sqw_reader::_get_thread_pix_param(size_t &first_thbuf_pix, size_t &last_thbuf_pix, size_t &n_buf_pix){
 
@@ -252,11 +252,22 @@ void sqw_reader::_get_thread_data(size_t &first_buf_pix, size_t &n_pix_in_buf, s
             this->read_pix_needed.notify_one();
             return;
         }
+        bool buf_size_changed(false);
+        if (pixbuf.size() != this->thread_pix_buffer.size()) {
+            buf_size_changed = true;
+        }
+
         first_buf_pix = this->n_first_threadbuf_pix;
         n_pix_in_buf  = this->num_treadbuf_pix;
-        this->thread_pix_buffer.swap(this->pix_buffer);
+        this->thread_pix_buffer.swap(pixbuf);
         this->n_first_threadbuf_pix = next_pix_to_read;
         this->pix_read = false;
+
+        if (buf_size_changed) {
+            size_t nex_size = this->thread_pix_buffer.size();
+            this->PIX_BUF_SIZE = nex_size / PIX_SIZE;
+            pixbuf.resize(nex_size);
+        }
     }
     this->read_pix_needed.notify_one();
 
