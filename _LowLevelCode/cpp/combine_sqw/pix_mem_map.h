@@ -9,6 +9,7 @@
 
 #include <thread>
 #include <mutex>
+#include <condition_variable>
 
 #include <algorithm>
 // Matlab includes

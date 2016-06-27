@@ -8,6 +8,7 @@
 // Matlab's includes
 #include <mex.h>
 #include <matrix.h>
+#include <limits>
 
 /* Class describes a file to combine */
 class fileParameters {

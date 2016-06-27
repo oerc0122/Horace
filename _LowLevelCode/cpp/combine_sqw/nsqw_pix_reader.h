@@ -1,7 +1,6 @@
 #ifndef H_NSQW_PIX_READER
 #define H_NSQW_PIX_READER
 
-#include "combine_sqw.h"
 #include "sqw_reader.h"
 #include "exchange_buffer.h"
 //-----------------------------------------------------------------------------------------------------------------
