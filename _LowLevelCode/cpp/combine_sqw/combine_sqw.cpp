@@ -39,16 +39,21 @@ enum OutputArguments { // unique output arguments,
     "pix_start_pos"     -- the location of the beginning of the pix data in the binary file. Similar to npix
     "file_id"           -- number of pixel (pixel ID) distinguishing the pixels, obtained from this run from
                            all other pixels in combined sqw file.
-    "nbins_total"       -- number of bins in 
+    "nbins_total"       -- number of bins stored in single data file
 %
 % 2) outFileParams -- structure, which defines the parameters for the pixels to write.
-    The structure is similar to the one used for inFileParams but some fields are undefined.
+    The structure is similar to the one used for inFileParams but some fields are undefined. 
+    The fields need to be defined are file_name, npix_start_pos and pix_start_pos.
+    The undefined fields are file_id and nbins_total
+    nbins_total is calculated from nbins_total of the input files and file id 
+    is the combination of file_ids of input files to can not be unique or defined.
 % 
 % 3) programSettings -- array of parameters defining the file combine process, namely:
 % n_bin        -- number of bins in the image array
 % 1            --first bin to start copy pixels for
 % out_buf_size -- the size of output buffer to use for writing pixels
-% change_fileno-- if pixel run id should be changed
+% log_level    -- how accurately report the progress of the mex file (if -1, no reporting occurs)
+% change_fileno-- if pixel run id should be changed as below.
 % relabel_with_fnum-- if change_fileno is true (1), how to calculate the new pixel
 %                     id -- by providing new id equal to filenum (1) or by adding
 %                     it to the existing num (0)
@@ -56,7 +61,8 @@ enum OutputArguments { // unique output arguments,
 %                 combining files together
 % buf size     -- buffer size -- the size of buffer used for each input file
 %                 read operations
-% multithreaded_combining - number, which define if to use multiple threads to read files and if yes, which subalgorithm to deploy
+% multithreaded_combining - number, which define if or how to use multiple threads to read files and, 
+                  which combining subalgorithm to deploy
 */
 
 
@@ -243,7 +249,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     }
   }
-  // set up the number of bins, which is currently equal for all input files
+  // set up the number of bins, which has to be equal for all input files
   for (size_t i = 0; i < n_files; i++) {
     fileParam[i].total_NfileBins = ProgSettings.totNumBins;
   }

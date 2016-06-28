@@ -3,12 +3,9 @@
 #include "nsqw_pix_reader.h"
 #include "sqw_pix_writer.h"
 
-//#define STDIO
-
 //
 // $Revision::      $ ($Date::                                              $)" 
 //
-
 
 enum readBinInfoOption {
     sumPixInfo,

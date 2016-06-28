@@ -26,7 +26,15 @@ void nsqw_pix_reader::run_read_job() {
     }
     Buff.set_write_allowed();
 }
-//
+/* Read pixels from all input files for correspondent bin and place them all together in the pixels buffer until the buffer is full
+   and contains pixels corresponding to number of bins 
+   Input as class parameter:
+   BinBuffer -- class containing the storage to place pixels
+
+   @param n_buf_pixels     -- on output contains number of pixels, fit into buffer
+   @param n_bins_processed -- on input contains number of first bin to read in the buffer, on output --
+                              last bin fit to buffer
+   */
 void nsqw_pix_reader::read_pix_info(size_t &n_buf_pixels, size_t &n_bins_processed, uint64_t *nBinBuffer) {
 
     n_buf_pixels = 0;

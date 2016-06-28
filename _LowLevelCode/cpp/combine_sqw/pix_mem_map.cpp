@@ -57,8 +57,9 @@ void pix_mem_map::init(const std::string &full_file_name, size_t bin_start_pos, 
         this->BIN_BUF_SIZE = BufferSize;
         this->BUF_EXTENSION_STEP = BIN_BUF_SIZE;
         this->nbin_read_buffer.resize(BIN_BUF_SIZE);
-        char *tBuff = reinterpret_cast<char *>(&nbin_read_buffer[0]);
-        h_data_file_bin.rdbuf()->pubsetbuf(tBuff, BIN_BUF_SIZE*BIN_SIZE_BYTES);
+        //char *tBuff = reinterpret_cast<char *>(&nbin_read_buffer[0]);
+        //h_data_file_bin.rdbuf()->pubsetbuf(tBuff, BIN_BUF_SIZE*BIN_SIZE_BYTES);
+        h_data_file_bin.rdbuf()->pubsetbuf(0,0);
         use_streambuf_direct = false;
         //
         nbin_buffer.resize(BIN_BUF_SIZE);
@@ -165,7 +166,7 @@ bool pix_mem_map::_read_bins(size_t num_bin, std::vector<bin_info> &inbuf, size_
         }
         std::streamoff length = tot_num_bins_to_read*BIN_SIZE_BYTES;
         char * buffer = reinterpret_cast<char *>(&nbin_read_buffer[0]);
-
+        //pbuf->pubsetbuf(buffer, length);
         pbuf->sgetn(buffer, length);
 
         inbuf[0] = bin_info(this->nbin_read_buffer[0], 0);

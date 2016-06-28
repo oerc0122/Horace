@@ -13,8 +13,9 @@ struct ProgParameters {
                          // all diagnostics information gets printed
     size_t num_log_ticks; // how many times per combine files to print log message about completion percentage
                           // Default constructor
+    int thread_mode;      // integer defining the thread spawn strategy to use while reading and combining files.
     ProgParameters() :totNumBins(0), nBin2read(0),
-        pixBufferSize(10000000), log_level(1), num_log_ticks(100)
+        pixBufferSize(10000000), log_level(1), num_log_ticks(100), thread_mode(0)
     {};
 };
 

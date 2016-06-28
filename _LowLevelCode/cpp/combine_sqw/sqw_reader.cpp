@@ -17,6 +17,7 @@ sqw_reader::~sqw_reader() {
     this->finish_read_job();
     h_data_file_pix.close();
 }
+//
 void sqw_reader::finish_read_job() {
     if (!this->use_multithreading_pix) {
         return;
@@ -40,7 +41,7 @@ void sqw_reader::finish_read_job() {
 void sqw_reader::init(const fileParameters &fpar, bool changefileno, bool fileno_provided, size_t pix_buf_size, int multithreading_settings) {
     bool bin_multithreading;
     switch (multithreading_settings) {
-    case(0):
+    case(-1,0):
         bin_multithreading = false;
         use_multithreading_pix = false;
         break;
@@ -75,9 +76,10 @@ void sqw_reader::init(const fileParameters &fpar, bool changefileno, bool fileno
     if (pix_buf_size != 0) {
         this->PIX_BUF_SIZE = pix_buf_size;
         this->pix_buffer.resize(PIX_BUF_SIZE*PIX_SIZE);
-        char *tBuff = reinterpret_cast<char *>(&pix_buffer[0]);
-        h_data_file_pix.rdbuf()->pubsetbuf(tBuff, PIX_BUF_SIZE*PIX_SIZE_BYTES);
+        //char *tBuff = reinterpret_cast<char *>(&pix_buffer[0]);
+        //h_data_file_pix.rdbuf()->pubsetbuf(tBuff, PIX_BUF_SIZE*PIX_SIZE_BYTES);
         this->use_streambuf_direct = false;
+        h_data_file_pix.rdbuf()->pubsetbuf(0, 0);
         //
     }
     else {
@@ -88,7 +90,6 @@ void sqw_reader::init(const fileParameters &fpar, bool changefileno, bool fileno
     }
 
 
-    //h_data_file_pix.rdbuf()->pubsetbuf(0, 0);
     h_data_file_pix.open(this->fileDescr.fileName, std::ios::in | std::ios::binary);
     if (!h_data_file_pix.is_open()) {
         std::string error("Can not open file: ");
@@ -326,6 +327,7 @@ void sqw_reader::_read_pix(size_t pix_start_num, float *const pix_buffer, size_t
     //
     char * buffer = reinterpret_cast<char *>(pix_buffer);
     std::streamoff length = num_pix_to_read*PIX_SIZE_BYTES;
+    //pbuf->pubsetbuf(buffer, length);
     pbuf->sgetn(buffer, length);
 
 
