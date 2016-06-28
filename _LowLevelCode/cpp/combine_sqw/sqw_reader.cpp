@@ -13,11 +13,11 @@ sqw_reader::sqw_reader() :
 {}
 
 sqw_reader::~sqw_reader() {
-    mexPrintf("|MEX::COMBINE_SQW: in destructor for file N %d  |",this->fileDescr.file_id);
-    mexEvalString("pause(.002);");
+    //mexPrintf("|MEX::COMBINE_SQW: in destructor for file N %d  |",this->fileDescr.file_id);
+    //mexEvalString("pause(.002);");
      
     this->finish_read_job();
-    h_data_file_pix.close();   
+    h_data_file_pix.close();
 }
 
 //
