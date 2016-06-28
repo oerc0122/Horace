@@ -520,6 +520,7 @@ void pix_mem_map::finish_read_bin_job() {
     this->read_bins_needed.notify_one();
 
     read_bins_job_holder.join();
+    this->use_multithreading = false;
 
 }
 

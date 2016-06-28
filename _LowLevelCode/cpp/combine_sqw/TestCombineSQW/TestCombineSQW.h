@@ -749,18 +749,18 @@ public:
                 pix_buffer[i] = 0;
             }
 
-            ////--------------------------------------------------------------------------------------------
-            //reader.init(file_par, false, false, 0);
-            ////
-            //t_start = std::chrono::steady_clock::now();
-            //start_buf_pos = 0;
-            //for (size_t i = 0; i < this->num_bin_in_file; i++) {
-            //    reader.get_pix_for_bin(i, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
-            //    start_buf_pos += num_bin_pix;
-            //}
-            //t_end = std::chrono::duration_cast<std::chrono::milliseconds>(
-            //    std::chrono::steady_clock::now() - t_start).count();
-            //std::cout << "\n Time to run single thread with system buffer: " << t_end << "ms\n";
+            //--------------------------------------------------------------------------------------------
+            reader.init(file_par, false, false, 0);
+            //
+            t_start = std::chrono::steady_clock::now();
+            start_buf_pos = 0;
+            for (size_t i = 0; i < this->num_bin_in_file; i++) {
+                reader.get_pix_for_bin(i, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
+                start_buf_pos += num_bin_pix;
+            }
+            t_end = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - t_start).count();
+            std::cout << "\n Time to run single thread with system buffer: " << t_end << "ms\n";
 
 
         }

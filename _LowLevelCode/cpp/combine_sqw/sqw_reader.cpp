@@ -25,6 +25,7 @@ void sqw_reader::finish_read_job() {
     if (!read_pix_job_holder.joinable()) {
         return;
     }
+    this->pix_map.finish_read_bin_job();
 
     {
         std::lock_guard<std::mutex> read_lock(this->pix_read_lock);

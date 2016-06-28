@@ -46,6 +46,7 @@ public:
     void get_map_param(size_t &first_mem_bin,size_t &last_mem_bin, size_t &n_tot_bins)const;
     /* return number of pixels, described by the map, stored in memory starting from the bin specified */
     size_t num_pix_described(size_t bin_number)const;
+    void finish_read_bin_job();
 
     ~pix_mem_map();
     /* Return number of pixels, stored in file and defined by this memory map*/
@@ -112,7 +113,6 @@ private:
     size_t BIN_BUF_SIZE; // physical size of the bins buffer
     //
     std::ifstream h_data_file_bin;
-    void finish_read_bin_job();
 
 
 };
