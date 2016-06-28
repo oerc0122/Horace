@@ -112,7 +112,7 @@ if(nFiles==1)
     mex(fname, '-outdir', outdir);
 else  
     %mex('-v',add_files{:}, '-outdir', outdir);
-     mex(add_files{:}, '-outdir', outdir);    
+    mex(add_files{:}, '-outdir', outdir);    
 end
 
 function access =check_access(outdir,filename)

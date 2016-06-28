@@ -159,6 +159,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
   //--------------------------------------------------------
   //-------   PROCESS PARAMETERS   -------------------------
   //--------------------------------------------------------
+  
+  
 
   bool debug_file_reader(false);
   size_t n_prog_params(4);
@@ -265,7 +267,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
   auto OutFilePar = fileParameters(pOutFileParams);
   // set up the number of bins, which is currently equal for input and output files
   OutFilePar.total_NfileBins = ProgSettings.totNumBins;
-
+  
   //--------------------------------------------------------
   //-------   RUN PROGRAM      -----------------------------
   //--------------------------------------------------------
@@ -275,7 +277,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
   }
   size_t n_buf_pixels(0), n_bins_processed(0);
   if (debug_file_reader) {
-
+    
     auto nbin_Buffer = mxCreateNumericMatrix(ProgSettings.totNumBins, 1, mxUINT64_CLASS, mxREAL);
     uint64_t *nbinBuf = (uint64_t *)mxGetPr(nbin_Buffer);
 
