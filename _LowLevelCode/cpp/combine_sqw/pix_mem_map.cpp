@@ -11,9 +11,9 @@ pix_mem_map::pix_mem_map() :
     _nTotalBins(0), _binFileStartPos(0),
     map_capacity_isknown(false),
     _numPixInMap(std::numeric_limits<uint64_t>::max()),
-    BUF_EXTENSION_STEP(512), // 4K 
+    BUF_EXTENSION_STEP(1024), // 4K 
 
-    BIN_BUF_SIZE(1),
+    BIN_BUF_SIZE(1024),
     //
     use_multithreading(false),
     nbins_read(false), read_job_completed(false), thread_read_to_end(false),
@@ -27,10 +27,10 @@ pix_mem_map::~pix_mem_map() {
 
 
 }
-void pix_mem_map::get_map_param(size_t &first_mem_bin, size_t &last_mem_bin, size_t &n_tot_bins)const{
+void pix_mem_map::get_map_param(size_t &first_mem_bin, size_t &last_mem_bin, size_t &n_tot_bins)const {
     first_mem_bin = this->num_first_buf_bin;
-    last_mem_bin  = this->num_last_buf_bin;
-    n_tot_bins    = this->_nTotalBins;
+    last_mem_bin = this->num_last_buf_bin;
+    n_tot_bins = this->_nTotalBins;
 
 }
 
@@ -59,17 +59,16 @@ void pix_mem_map::init(const std::string &full_file_name, size_t bin_start_pos, 
         this->nbin_read_buffer.resize(BIN_BUF_SIZE);
         //char *tBuff = reinterpret_cast<char *>(&nbin_read_buffer[0]);
         //h_data_file_bin.rdbuf()->pubsetbuf(tBuff, BIN_BUF_SIZE*BIN_SIZE_BYTES);
-        h_data_file_bin.rdbuf()->pubsetbuf(0,0);
+        h_data_file_bin.rdbuf()->pubsetbuf(0, 0);
         use_streambuf_direct = false;
         //
         nbin_buffer.resize(BIN_BUF_SIZE);
     }
     else {
-        BIN_BUF_SIZE = 1;
+        this->BUF_EXTENSION_STEP = 1024;
+        this->BIN_BUF_SIZE = BUF_EXTENSION_STEP;
         use_streambuf_direct = true;
         nbin_read_buffer.resize(BIN_BUF_SIZE);
-        //
-        this->BUF_EXTENSION_STEP = 512;
         nbin_buffer.resize(BUF_EXTENSION_STEP);
     }
     h_data_file_bin.open(full_file_name, std::ios::in | std::ios::binary);
@@ -149,31 +148,19 @@ bool pix_mem_map::_read_bins(size_t num_bin, std::vector<bin_info> &inbuf, size_
     auto pbuf = h_data_file_bin.rdbuf();
     pbuf->pubseekpos(bin_pos);
 
-    if (this->use_streambuf_direct)
-    {
-        this->nbin_read_buffer.resize(1);
-        char * buffer = reinterpret_cast<char *>(&nbin_read_buffer[0]);
-        pbuf->sgetn(buffer, BIN_SIZE_BYTES);
-        inbuf[0] = bin_info(this->nbin_read_buffer[0], 0);
-        for (size_t i = 1; i < tot_num_bins_to_read; i++) {
-            pbuf->sgetn(buffer, BIN_SIZE_BYTES);
-            inbuf[i] = bin_info(this->nbin_read_buffer[0], inbuf[i - 1].pix_pos + inbuf[i - 1].num_bin_pixels);
-        }
+    if (tot_num_bins_to_read > nbin_read_buffer.size()) {
+        this->nbin_read_buffer.resize(tot_num_bins_to_read);
     }
-    else {
-        if (tot_num_bins_to_read > nbin_read_buffer.size()) {
-            this->nbin_read_buffer.resize(tot_num_bins_to_read);
-        }
-        std::streamoff length = tot_num_bins_to_read*BIN_SIZE_BYTES;
-        char * buffer = reinterpret_cast<char *>(&nbin_read_buffer[0]);
-        //pbuf->pubsetbuf(buffer, length);
-        pbuf->sgetn(buffer, length);
+    std::streamoff length = tot_num_bins_to_read*BIN_SIZE_BYTES;
+    char * buffer = reinterpret_cast<char *>(&nbin_read_buffer[0]);
+    //pbuf->pubsetbuf(buffer, length);
+    pbuf->sgetn(buffer, length);
 
-        inbuf[0] = bin_info(this->nbin_read_buffer[0], 0);
-        for (size_t i = 1; i < tot_num_bins_to_read; i++) {
-            inbuf[i] = bin_info(this->nbin_read_buffer[i], inbuf[i - 1].pix_pos + inbuf[i - 1].num_bin_pixels);
-        }
+    inbuf[0] = bin_info(this->nbin_read_buffer[0], 0);
+    for (size_t i = 1; i < tot_num_bins_to_read; i++) {
+        inbuf[i] = bin_info(this->nbin_read_buffer[i], inbuf[i - 1].pix_pos + inbuf[i - 1].num_bin_pixels);
     }
+
     //
     buf_end = tot_num_bins_to_read;
     // store number of pixels described by the whole pix map
@@ -420,9 +407,9 @@ size_t pix_mem_map::check_expand_pix_map(size_t bin_number, size_t num_pix_to_fi
     else if (num_pix_in_map > num_pix_to_fit) {// find 
         size_t  num_bin_in_buf = bin_number - this->num_first_buf_bin;
         size_t  num_pix_before_bin = this->nbin_buffer[num_bin_in_buf].pix_pos;
-        auto pEnd = this->nbin_buffer.begin() + (this->num_last_buf_bin - this->num_first_buf_bin );
-        auto first_out = std::lower_bound(this->nbin_buffer.begin()+ num_bin_in_buf,pEnd, num_pix_to_fit+ num_pix_before_bin, comp_fun);
-        return (first_out->pix_pos- num_pix_before_bin);
+        auto pEnd = this->nbin_buffer.begin() + (this->num_last_buf_bin - this->num_first_buf_bin);
+        auto first_out = std::lower_bound(this->nbin_buffer.begin() + num_bin_in_buf, pEnd, num_pix_to_fit + num_pix_before_bin, comp_fun);
+        return (first_out->pix_pos - num_pix_before_bin);
     }
     else {
         if (this->map_capacity_isknown) { // we have read the whole memory map.
@@ -452,7 +439,8 @@ size_t pix_mem_map::check_expand_pix_map(size_t bin_number, size_t num_pix_to_fi
             if (end_of_pix_reached || this->read_job_completed) { // we have read up to the end of the map so nothing to read now or
                 // reading process may have been interrupted so we do not actually have data ready
                 break;
-            }else {
+            }
+            else {
                 num_first_bin = last_tmp_bin;
             }
 
@@ -482,7 +470,7 @@ void pix_mem_map::read_bins_job() {
             if (this->read_job_completed) {
                 this->nbins_read = true;
                 this->bins_ready.notify_one(); // just in case
-                break;
+                return;
             }
 
             if (this->n_first_rbuf_bin < this->_nTotalBins) {

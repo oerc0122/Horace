@@ -313,22 +313,22 @@ public:
 
         pix_map.thread_query_data(first_th_bin, last_tr_bin, buf_end);
         TS_ASSERT_EQUALS(first_th_bin,0);
-        TS_ASSERT_EQUALS(last_tr_bin, 512);
-        TS_ASSERT_EQUALS(buf_end,512);
+        TS_ASSERT_EQUALS(last_tr_bin, 1024);
+        TS_ASSERT_EQUALS(buf_end,1024);
 
-        pix_map.thread_request_to_read(600);
+        pix_map.thread_request_to_read(1600);
         pix_map.thread_query_data(first_th_bin, last_tr_bin, buf_end);
-        TS_ASSERT_EQUALS(first_th_bin, 600);
-        TS_ASSERT_EQUALS(last_tr_bin, 600+512);
-        TS_ASSERT_EQUALS(buf_end, 512);
+        TS_ASSERT_EQUALS(first_th_bin, 1600);
+        TS_ASSERT_EQUALS(last_tr_bin, 1600+1024);
+        TS_ASSERT_EQUALS(buf_end, 1024);
 
         std::vector<pix_mem_map::bin_info> buf;
         pix_map.thread_get_data(first_th_bin, buf,last_tr_bin, buf_end);
 
         pix_map.thread_query_data(first_th_bin, last_tr_bin, buf_end);
-        TS_ASSERT_EQUALS(first_th_bin, 512+600);
-        TS_ASSERT_EQUALS(last_tr_bin, 600 + 1024);
-        TS_ASSERT_EQUALS(buf_end, 512);
+        TS_ASSERT_EQUALS(first_th_bin, 1024+1600);
+        TS_ASSERT_EQUALS(last_tr_bin, 1600 + 2048);
+        TS_ASSERT_EQUALS(buf_end, 1024);
 
 
     }

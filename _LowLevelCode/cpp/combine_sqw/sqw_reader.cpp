@@ -9,7 +9,7 @@ sqw_reader::sqw_reader() :
     npix_in_buf_start(0), buf_pix_end(0),
     PIX_BUF_SIZE(1024), change_fileno(false), fileno(true),
     n_first_threadbuf_pix(0),
-    use_multithreading_pix(true), pix_read(false), pix_read_job_completed(false)
+    use_multithreading_pix(false), pix_read(false), pix_read_job_completed(false)
 {}
 
 sqw_reader::~sqw_reader() {
@@ -17,46 +17,27 @@ sqw_reader::~sqw_reader() {
     this->finish_read_job();
     h_data_file_pix.close();
 }
-//
-void sqw_reader::finish_read_job() {
-    if (!this->use_multithreading_pix) {
-        return;
-    }
-    if (!read_pix_job_holder.joinable()) {
-        return;
-    }
-    this->pix_map.finish_read_bin_job();
 
-    {
-        std::lock_guard<std::mutex> read_lock(this->pix_read_lock);
-
-        this->pix_read_job_completed = true;
-        // finish incomplete read job if it has not been finished naturally
-        this->pix_read = false;
-    }
-    this->read_pix_needed.notify_one();
-    read_pix_job_holder.join();
-    this->use_multithreading_pix = false;
-}
 //
 void sqw_reader::init(const fileParameters &fpar, bool changefileno, bool fileno_provided, size_t pix_buf_size, int multithreading_settings) {
-    bool bin_multithreading;
+    
+    bool bin_multithreading(false),pix_multithreading(false);
     switch (multithreading_settings) {
     case(-1,0):
         bin_multithreading = false;
-        use_multithreading_pix = false;
+        pix_multithreading = false;
         break;
     case(1):
         bin_multithreading = true;
-        use_multithreading_pix = true;
+        pix_multithreading = true;
         break;
     case(2):
         bin_multithreading = true;
-        use_multithreading_pix = false;
+        pix_multithreading = false;
         break;
     case(3):
         bin_multithreading = false;
-        use_multithreading_pix = true;
+        pix_multithreading = true;
         break;
     default:
         mexErrMsgTxt("Input multithreading parameter should be 0 (no multithreading) 1 (multithreading)"
@@ -66,8 +47,10 @@ void sqw_reader::init(const fileParameters &fpar, bool changefileno, bool fileno
     this->fileDescr = fpar;
     if (h_data_file_pix.is_open()) {
         h_data_file_pix.close();
-        finish_read_job();
     }
+    this->finish_read_job();
+
+
     _nPixInFile = 0;
     npix_in_buf_start = 0;
     buf_pix_end = 0;
@@ -86,6 +69,7 @@ void sqw_reader::init(const fileParameters &fpar, bool changefileno, bool fileno
     else {
         this->use_streambuf_direct = true;
         this->use_multithreading_pix = false;
+        pix_multithreading = false;  // in this case pixels are directly read to target buffer, so no multithreading is possible
         //this->PIX_BUF_SIZE = this->PIX_BUF_DEFAULT_SIZE;
         //this->pix_buffer.resize(PIX_BUF_SIZE*PIX_SIZE);
     }
@@ -112,7 +96,8 @@ void sqw_reader::init(const fileParameters &fpar, bool changefileno, bool fileno
     }
 
 
-    if (this->use_multithreading_pix) {
+    if (pix_multithreading) {
+       this->use_multithreading_pix = true;
         this->thread_pix_buffer.resize(PIX_BUF_SIZE*PIX_SIZE);
         this->n_first_threadbuf_pix = 0;
         this->num_treadbuf_pix = 0;
@@ -289,7 +274,7 @@ void sqw_reader::read_pixels_job() {
             if (this->pix_read_job_completed) {
                 this->pix_read = true;
                 this->pix_ready.notify_one();
-                break;
+                return;
             }
 
             size_t n_pix_to_read = thread_pix_buffer.size()/PIX_SIZE;
@@ -307,7 +292,28 @@ void sqw_reader::read_pixels_job() {
     }
 
 }
+//
+void sqw_reader::finish_read_job() {
+    this->pix_map.finish_read_bin_job();
 
+    if (!this->use_multithreading_pix) {
+        return;
+    }
+    if (!read_pix_job_holder.joinable()) {
+        return;
+    }
+
+    {
+        std::lock_guard<std::mutex> read_lock(this->pix_read_lock);
+
+        this->pix_read_job_completed = true;
+        // finish incomplete read job if it has not been finished naturally
+        this->pix_read = false;
+    }
+    this->read_pix_needed.notify_one();
+    read_pix_job_holder.join();
+    this->use_multithreading_pix = false;
+}
 
 
 /* Read specified number of pixels into the pixel buffer provided */
