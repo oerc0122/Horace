@@ -130,9 +130,9 @@ void combine_sqw(ProgParameters &param, std::vector<sqw_reader> &fileReaders, co
       mexEvalString("pause(.002);");
     }
   }
-  reader.join();
+  
+  reader.join();  
   writer.join();
-
 
   if (interrupted) {
     mexPrintf("%s", ".\n");
@@ -141,7 +141,6 @@ void combine_sqw(ProgParameters &param, std::vector<sqw_reader> &fileReaders, co
   else {
     Buff.print_final_log_mess(log_level);
   }
-
 
   if (Buff.is_interrupted()) {
     mexErrMsgIdAndTxt("MEX_COMBINE_SQW:interrupted", Buff.error_message.c_str());

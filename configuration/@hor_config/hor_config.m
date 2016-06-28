@@ -278,10 +278,8 @@ classdef hor_config<config_base
             end
         end
         function this= set.mex_combine_buffer_size(this,val)
-            if val<64
-                error('HOR_CONFIG:mex_combine_buffer_size',' mex_combine_buffer_size should be bigger then 64, and better >1024');
-            end
-            if val==0
+            if val<0
+                warning('HOR_CONFIG:mex_combine_buffer_size','use mex for combining have been disabled');
                 this.use_mex_for_combine = false;
                 return;
             end
