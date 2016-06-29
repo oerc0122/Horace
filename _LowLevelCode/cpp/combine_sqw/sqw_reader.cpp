@@ -62,18 +62,16 @@ void sqw_reader::init(const fileParameters &fpar, bool changefileno, bool fileno
     if (pix_buf_size != 0) {
         this->PIX_BUF_SIZE = pix_buf_size;
         this->pix_buffer.resize(PIX_BUF_SIZE*PIX_SIZE);
-        //char *tBuff = reinterpret_cast<char *>(&pix_buffer[0]);
-        //h_data_file_pix.rdbuf()->pubsetbuf(tBuff, PIX_BUF_SIZE*PIX_SIZE_BYTES);
         this->use_streambuf_direct = false;
+        // set up unbuffered IO.
         h_data_file_pix.rdbuf()->pubsetbuf(0, 0);
         //
     }
     else {
         this->use_streambuf_direct = true;
+       // in this case pixels are directly read to the target buffer, so no multithreading is possible
+        pix_multithreading = false;
         this->use_multithreading_pix = false;
-        pix_multithreading = false;  // in this case pixels are directly read to target buffer, so no multithreading is possible
-        //this->PIX_BUF_SIZE = this->PIX_BUF_DEFAULT_SIZE;
-        //this->pix_buffer.resize(PIX_BUF_SIZE*PIX_SIZE);
     }
 
 
@@ -99,7 +97,8 @@ void sqw_reader::init(const fileParameters &fpar, bool changefileno, bool fileno
 
 
     if (pix_multithreading) {
-       this->use_multithreading_pix = true;
+        this->use_multithreading_pix = true;
+        this->pix_read_job_completed = false;
         this->thread_pix_buffer.resize(PIX_BUF_SIZE*PIX_SIZE);
         this->n_first_threadbuf_pix = 0;
         this->num_treadbuf_pix = 0;
@@ -298,7 +297,7 @@ void sqw_reader::read_pixels_job() {
 void sqw_reader::finish_read_job() {
     this->pix_map.finish_read_bin_job();
 
-    if (!this->use_multithreading_pix) {
+    if (!this->use_multithreading_pix || this->pix_read_job_completed) {
         return;
     }
     if (!read_pix_job_holder.joinable()) {
@@ -314,7 +313,7 @@ void sqw_reader::finish_read_job() {
     }
     this->read_pix_needed.notify_one();
     read_pix_job_holder.join();
-    this->use_multithreading_pix = false;
+
 }
 
 

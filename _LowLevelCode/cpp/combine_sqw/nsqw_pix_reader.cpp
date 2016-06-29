@@ -25,6 +25,10 @@ void nsqw_pix_reader::run_read_job() {
         n_pixels_processed += n_buf_pixels;
     }
     Buff.set_write_allowed();
+    // cancel read jobs (if any). Need to investigate why this does not properly done in the destructor.
+    for (size_t i = 0; i < fileReaders.size(); i++) {
+        fileReaders[i].finish_read_job();
+    }
 }
 /* Read pixels from all input files for correspondent bin and place them all together in the pixels buffer until the buffer is full
    and contains pixels corresponding to number of bins 
@@ -57,7 +61,7 @@ void nsqw_pix_reader::read_pix_info(size_t &n_buf_pixels, size_t &n_bins_process
 
     for (size_t n_bin = first_bin; n_bin < nBinsTotal; n_bin++) {
         size_t cell_pix = 0;
-
+        // estimate amount of space all files contribute into current cell.
         for (size_t i = 0; i < n_files; i++) {
             fileReaders[i].get_pix_map().get_npix_for_bin(n_bin, pix_start_num, npix);
             cell_pix += npix;
@@ -77,7 +81,7 @@ void nsqw_pix_reader::read_pix_info(size_t &n_buf_pixels, size_t &n_bins_process
                     pix_buffer_size = Buff.pix_buf_size();
                 }
                 else {
-                    Buff.set_interrupted("==>output pixels buffer is to small to accommodate single bin. Increase the size of output pixels buffer");
+                    Buff.set_interrupted("==>output pixels buffer is too small to accommodate a single bin. Increase the size of output pixels buffer");
                     break;
                 }
             }
@@ -87,7 +91,7 @@ void nsqw_pix_reader::read_pix_info(size_t &n_buf_pixels, size_t &n_bins_process
             }
         }
 
-
+        // read pixels from all contributing files into the space, intended for target bin
         for (size_t i = 0; i < n_files; i++) {
             fileReaders[i].get_pix_for_bin(n_bin, pPixBuffer, n_buf_pixels,
                 pix_start_num, npix, common_position);

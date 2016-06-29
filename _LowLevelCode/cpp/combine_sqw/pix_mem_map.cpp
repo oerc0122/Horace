@@ -490,7 +490,7 @@ void pix_mem_map::read_bins_job() {
 
 /**/
 void pix_mem_map::finish_read_bin_job() {
-    if (!this->use_multithreading) {
+    if (!this->use_multithreading || this->read_job_completed) {
         return;
     }
     if (!read_bins_job_holder.joinable()) {
@@ -508,7 +508,5 @@ void pix_mem_map::finish_read_bin_job() {
     this->read_bins_needed.notify_one();
 
     read_bins_job_holder.join();
-    this->use_multithreading = false;
-
 }
 
