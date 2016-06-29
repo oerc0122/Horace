@@ -324,6 +324,7 @@ void sqw_reader::finish_read_job() {
         this->pix_read_job_completed = true;
         // finish incomplete read job if it has not been finished naturally
         this->pix_read = false;
+        this->read_pix_needed.notify_one();
     }
     this->read_pix_needed.notify_one();
     read_pix_job_holder.join();

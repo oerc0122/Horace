@@ -1,4 +1,7 @@
 #pragma once
+
+//#include <Windows.h>
+
 #include <cxxtest/TestSuite.h>
 #include "../combine_sqw.h"
 #include "nsqw_pix_reader.h"
@@ -55,7 +58,21 @@ public:
     static void destroySuite(TestCombineSQW*suite) { delete suite; }
 
     TestCombineSQW() {
+/*
+#ifdef _WIN32
+        std::vector<wchar_t> Buffer(10000);
+        GetModuleFileName(NULL, &Buffer[0], Buffer.size());
+        auto tmpws = std::wstring(&Buffer[0]);
+        std::string tmps(tmpws.begin(),tmpws.end());
+        std::string::size_type pos = tmps.find_last_of("\\/");
+        test_file_name  = tmps.substr(0, pos);
+#else
         test_file_name = "d:/Data/svn/Horace/_test/test_symmetrisation/w3d_sqw.sqw";
+#endif
+*/
+        //test_file_name = "d:/Data/svn/Horace/_test/test_symmetrisation/w3d_sqw.sqw";
+        test_file_name = "d:/Users/abuts/Data/ExcitDev/ISIS_svn/Hor#160/_test/test_symmetrisation/w3d_sqw.sqw";
+        
         num_bin_in_file = 472392;
         bin_pos_in_file = 5194471;
         pix_pos_in_file = 8973651;
