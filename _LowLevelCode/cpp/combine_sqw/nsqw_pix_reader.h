@@ -22,11 +22,11 @@ struct ProgParameters {
 //-----------------------------------------------------------------------------------------------------------------
 /* Structure (class) supporting the read operations for range of input files and combining the information
 from this files together in the file buffer*/
-struct nsqw_pix_reader {
+class nsqw_pix_reader {
     ProgParameters &param;
     std::vector<sqw_reader> &fileReaders;
     exchange_buffer &Buff;
-
+public:
     nsqw_pix_reader(ProgParameters &prog_par, std::vector<sqw_reader> &tmpReaders, exchange_buffer &buf) :
         param(prog_par), fileReaders(tmpReaders), Buff(buf)
     { }
@@ -34,6 +34,7 @@ struct nsqw_pix_reader {
     void operator()() {
         this->run_read_job();
     }
+    void finish_read_jobs();
 
     //
     void run_read_job();

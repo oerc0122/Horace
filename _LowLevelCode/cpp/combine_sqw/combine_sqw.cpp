@@ -130,9 +130,10 @@ void combine_sqw(ProgParameters &param, std::vector<sqw_reader> &fileReaders, co
       mexEvalString("pause(.002);");
     }
   }
-  
-  reader.join();  
+
+  reader.join();
   writer.join();
+  Reader.finish_read_jobs();
 
   if (interrupted) {
     mexPrintf("%s", ".\n");

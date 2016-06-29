@@ -814,7 +814,7 @@ public:
             initialized=false;
             try {
                 //(fileParam[i], change_fileno, fileno_provided, read_buf_size, read_files_multitreaded);
-                reader_threads[0].init(file_par, false, false, 64, 3);
+                reader_threads[0].init(file_par, false, false, 64, 1);
                 initialized = true;
             }
             catch (...) {

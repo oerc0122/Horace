@@ -25,10 +25,6 @@ void nsqw_pix_reader::run_read_job() {
         n_pixels_processed += n_buf_pixels;
     }
     Buff.set_write_allowed();
-    // cancel read jobs (if any). Need to investigate why this does not properly done in the destructor.
-    for (size_t i = 0; i < fileReaders.size(); i++) {
-        fileReaders[i].finish_read_job();
-    }
 }
 /* Read pixels from all input files for correspondent bin and place them all together in the pixels buffer until the buffer is full
    and contains pixels corresponding to number of bins 
@@ -100,4 +96,12 @@ void nsqw_pix_reader::read_pix_info(size_t &n_buf_pixels, size_t &n_bins_process
     }
     // unlocks read buffer too
     Buff.set_and_lock_write_buffer(n_buf_pixels, n_bins_processed + 1);
+}
+
+void nsqw_pix_reader::finish_read_jobs() {
+    // cancel read jobs (if any). Need to investigate why this does not properly done in the destructor.
+    for (size_t i = 0; i < this->fileReaders.size(); i++) {
+        fileReaders[i].finish_read_job();
+    }
+
 }
