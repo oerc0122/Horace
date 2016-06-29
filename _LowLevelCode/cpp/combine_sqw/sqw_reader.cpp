@@ -9,7 +9,7 @@ sqw_reader::sqw_reader() :
     npix_in_buf_start(0), buf_pix_end(0),
     PIX_BUF_SIZE(1024), change_fileno(false), fileno(true),
     n_first_threadbuf_pix(0),
-    use_multithreading_pix(false), pix_read(false), pix_read_job_completed(false)
+    use_multithreading_pix(false), pix_read(false), pix_read_job_completed(true)
 {}
 
 sqw_reader::~sqw_reader() {
@@ -50,7 +50,9 @@ void sqw_reader::init(const fileParameters &fpar, bool changefileno, bool fileno
     if (h_data_file_pix.is_open()) {
         h_data_file_pix.close();
     }
-    this->finish_read_job();
+    if (this->use_multithreading_pix && !this->pix_read_job_completed){
+        this->finish_read_job();
+    }
 
 
     _nPixInFile = 0;
@@ -311,7 +313,13 @@ void sqw_reader::read_pixels_job() {
 }
 //
 void sqw_reader::finish_read_job() {
+    //mexPrintf("|MEX::COMBINE_SQW: in finish read job for file N %d  |",this->fileDescr.file_id);
+    //mexEvalString("pause(.002);");
+    
     this->pix_map.finish_read_bin_job();
+    //mexPrintf(" completed pix map job|");
+    //mexEvalString("pause(.002);");
+    
 
     if (!this->use_multithreading_pix || this->pix_read_job_completed) {
         return;
@@ -329,6 +337,8 @@ void sqw_reader::finish_read_job() {
     }
     this->read_pix_needed.notify_one();
     read_pix_job_holder.join();
+    //mexPrintf(" completed pix read job|\n",this->fileDescr.file_id);
+    //mexEvalString("pause(.002);");
 
 }
 

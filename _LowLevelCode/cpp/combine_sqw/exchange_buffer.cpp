@@ -126,7 +126,7 @@ void exchange_buffer::print_log_meassage(int log_level) {
         buf << "MEX::COMBINE_SQW: Completed " << std::setw(4) << std::setprecision(3)
             << float(100 * n_bins_processed) / float(num_bins_to_process)
             << "%  of task in " << std::setprecision(0) << std::setw(6) << int(seconds) << " sec; CPU time: "
-            << (c_end - c_start) / CLOCKS_PER_SEC << " sec\n";
+            << (c_end - c_start) / CLOCKS_PER_SEC << " sec";
 
         mexPrintf("%s", buf.str().c_str());
         //mexEvalString("drawnow");

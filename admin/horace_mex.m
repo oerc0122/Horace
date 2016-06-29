@@ -111,7 +111,7 @@ if(nFiles==1)
     fname      = strtrim(add_files{1});
     mex(fname, '-outdir', outdir);
 else  
-    %mex('-v',add_files{:}, '-outdir', outdir);
+    %mex('-g',add_files{:}, '-outdir', outdir);
     mex(add_files{:}, '-outdir', outdir);    
 end
 

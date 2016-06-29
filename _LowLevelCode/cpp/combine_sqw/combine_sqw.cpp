@@ -93,25 +93,17 @@ void combine_sqw(ProgParameters &param, std::vector<sqw_reader> &fileReaders, co
   std::mutex log_mutex;
   std::unique_lock<std::mutex> l(log_mutex);  
   int c_sensitivity(2000); // msc
-  //mexPrintf("%s\n", "MEX::COMBINE_SQW: starting logging loop ");  
-  //mexEvalString("pause(.002);");        
   while (!Buff.is_write_job_completed()) {
-    //mexPrintf("%s%d\n", "MEX::COMBINE_SQW: log_loop: ",count);
-    //mexEvalString("pause(.002);");            
-    //count++;
     
     Buff.logging_ready.wait_for(l, std::chrono::milliseconds(c_sensitivity), [&Buff]() {return Buff.do_logging; });
-    //mexPrintf("%s","before BUF Do logging in\n");
-    //mexEvalString("pause(.002);");    
     if (Buff.do_logging) {
       if (interrupted) {
         mexPrintf("%s", ".\n");
         mexEvalString("pause(.002);");
       }
+      mexPrintf("%s", "\n");      
       Buff.print_log_meassage(log_level);
     }
-    //mexPrintf("%s","after BUF Do logging in\n");
-    //mexEvalString("pause(.002);");    
     
     if (utIsInterruptPending()) {
       if (!interrupted) {
@@ -122,23 +114,27 @@ void combine_sqw(ProgParameters &param, std::vector<sqw_reader> &fileReaders, co
       }
       interrupted = true;
     }
-    //mexPrintf("%s","after check interrupt\n");
-    //mexEvalString("pause(.002);");
     
-    if (interrupted) {
-      mexPrintf("%s", ".");
-      mexEvalString("pause(.002);");
-    }
+    mexPrintf("%s", ".");
+    mexEvalString("pause(.002);");
   }
+  //mexPrintf("Log loop completed\n");
+  //mexEvalString("pause(.002);");
+  
   writer.join();
+ 
   reader.join();  
   Reader.finish_read_jobs();
+  //mexPrintf("Reader joined\n");
+  //mexEvalString("pause(.002);");
+  
 
   if (interrupted) {
     mexPrintf("%s", ".\n");
     mexEvalString("pause(.002);");
   }
   else {
+    mexPrintf("%s", "\n");      
     Buff.print_final_log_mess(log_level);
   }
 
