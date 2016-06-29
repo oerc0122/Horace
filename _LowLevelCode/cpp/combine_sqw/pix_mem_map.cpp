@@ -461,7 +461,7 @@ void pix_mem_map::read_bins_job() {
 
     std::unique_lock<std::mutex> lock(this->exchange_lock);
     while (!this->read_job_completed) {
-        this->read_bins_needed.wait(lock, [this]() {return !(this->nbins_read); });
+        this->read_bins_needed.wait(lock, [this]() {return (!this->nbins_read) || this->read_job_completed; });
         {
             std::lock_guard<std::mutex> read_lock(this->bin_read_lock);// lock read operation as thread can be released from more then one place
 

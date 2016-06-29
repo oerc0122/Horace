@@ -282,7 +282,7 @@ void sqw_reader::read_pixels_job() {
     std::unique_lock<std::mutex> lock(this->pix_exchange_lock);
 
     while (!this->pix_read_job_completed) {
-        this->read_pix_needed.wait(lock, [this]() {return !this->pix_read; });
+        this->read_pix_needed.wait(lock, [this]() {return (!this->pix_read) || this->pix_read_job_completed; });
         {
             std::lock_guard<std::mutex> read_lock(this->pix_read_lock);
 
@@ -324,7 +324,6 @@ void sqw_reader::finish_read_job() {
         this->pix_read_job_completed = true;
         // finish incomplete read job if it has not been finished naturally
         this->pix_read = false;
-        this->read_pix_needed.notify_one();
     }
     this->read_pix_needed.notify_one();
     read_pix_job_holder.join();
