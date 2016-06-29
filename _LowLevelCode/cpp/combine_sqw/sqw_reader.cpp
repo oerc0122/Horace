@@ -179,7 +179,10 @@ void sqw_reader::_update_cash(size_t bin_number, size_t pix_start_num, size_t nu
             thread_pix_buffer.resize(num_pix_to_read*PIX_SIZE);
         }
         size_t first_thbuf_pix, last_thbuf_pix, n_thrbuf_pix;
-        this->_get_thread_pix_param(first_thbuf_pix, last_thbuf_pix, n_thrbuf_pix);
+        bool job_completed = this->_get_thread_pix_param(first_thbuf_pix, last_thbuf_pix, n_thrbuf_pix);
+        if (job_completed) {
+            return;
+        }
         if (pix_start_num>= first_thbuf_pix && pix_start_num+ num_pix_in_bin<last_thbuf_pix) {
             size_t next_thr_pix_to_read = pix_start_num+ num_pix_to_read;
             this->_get_thread_data(pix_start_num, num_pix_in_buffer,pix_buffer, next_thr_pix_to_read);
@@ -217,15 +220,26 @@ void sqw_reader::_update_cash(size_t bin_number, size_t pix_start_num, size_t nu
     this->buf_pix_end = this->npix_in_buf_start + num_pix_in_buffer;
 
 }
-void sqw_reader::_get_thread_pix_param(size_t &first_thbuf_pix, size_t &last_thbuf_pix, size_t &n_buf_pix){
+bool sqw_reader::_get_thread_pix_param(size_t &first_thbuf_pix, size_t &last_thbuf_pix, size_t &n_buf_pix){
 
     std::unique_lock<std::mutex> lock(this->pix_exchange_lock);
     this->pix_ready.wait(lock, [this]() {return this->pix_read; });
 
     std::lock_guard<std::mutex> read_lock(this->pix_read_lock);
+    if (this->pix_read_job_completed) {
+        this->pix_read = false;
+        n_buf_pix = 0;
+        first_thbuf_pix = 0;
+        last_thbuf_pix = 0;
+        this->read_pix_needed.notify_one();
+        return true;
+    }
+
     first_thbuf_pix = this->n_first_threadbuf_pix;
-    n_buf_pix       = this->num_treadbuf_pix;
-    last_thbuf_pix  = first_thbuf_pix+ n_buf_pix;
+    n_buf_pix = this->num_treadbuf_pix;
+    last_thbuf_pix = first_thbuf_pix + n_buf_pix;
+    return false;
+
 
 }
 /* Get thread data and instruct thread to read next part of the pixel information*/

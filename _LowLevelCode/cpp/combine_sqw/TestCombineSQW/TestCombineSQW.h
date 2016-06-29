@@ -79,6 +79,7 @@ public:
 
         data_file_bin.close();
     }
+
     void test_read_nbins() {
         pix_map_tester pix_map;
 
@@ -843,6 +844,30 @@ public:
                 size_t n_pix = i/9;
                 TSM_ASSERT_EQUALS("pix N" + std::to_string(n_pix), buf[i], buf1[i]);
             }
+
+        }
+        void xest_combine_sqw_pix_multi() {
+            sqw_reader reader;
+            fileParameters file_par;
+            file_par.fileName = test_file_name;
+            file_par.file_id = 0;
+            file_par.nbin_start_pos = bin_pos_in_file;
+            file_par.pix_start_pos = pix_pos_in_file;
+            file_par.total_NfileBins = num_bin_in_file;
+            std::vector<float> pix_buffer;
+            pix_buffer.resize(1000);
+            float *pPix_info = &pix_buffer[0];
+
+
+            size_t start_buf_pos(0), pix_start_num(0), num_bin_pix;
+            //--------------------------------------------------------------------------------------------
+            reader.init(file_par, false, false, 1000, 1);
+            //
+            auto t_start = std::chrono::steady_clock::now();
+            start_buf_pos = 0;
+            reader.get_pix_for_bin(num_bin_in_file - 600, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
+
+            reader.get_pix_for_bin(num_bin_in_file - 601, pPix_info, start_buf_pos, pix_start_num, num_bin_pix, false);
 
         }
 

@@ -33,7 +33,7 @@ private:
     void _update_cash(size_t bin_number, size_t pix_start_num, size_t num_pix_in_bin, float *const pix_info);
 
     void _read_pix(size_t pix_start_num, float *const pix_buffer, size_t &num_pix_to_read);
-    void _get_thread_pix_param(size_t &first_thbuf_pix, size_t &last_thbuf_pix, size_t &n_tot_pix);
+    bool _get_thread_pix_param(size_t &first_thbuf_pix, size_t &last_thbuf_pix, size_t &n_tot_pix);
     void _get_thread_data(size_t &first_buf_pix, size_t &n_pix_in_buf,std::vector<float> &pixbuf, size_t next_pix_to_read);
 
 
