@@ -70,8 +70,8 @@ public:
         test_file_name = "d:/Data/svn/Horace/_test/test_symmetrisation/w3d_sqw.sqw";
 #endif
 */
-        //test_file_name = "d:/Data/svn/Horace/_test/test_symmetrisation/w3d_sqw.sqw";
-        test_file_name = "d:/Users/abuts/Data/ExcitDev/ISIS_svn/Hor#160/_test/test_symmetrisation/w3d_sqw.sqw";
+        test_file_name = "d:/Data/svn/Horace/_test/test_symmetrisation/w3d_sqw.sqw";
+        //test_file_name = "d:/Users/abuts/Data/ExcitDev/ISIS_svn/Hor#160/_test/test_symmetrisation/w3d_sqw.sqw";
         
         num_bin_in_file = 472392;
         bin_pos_in_file = 5194471;

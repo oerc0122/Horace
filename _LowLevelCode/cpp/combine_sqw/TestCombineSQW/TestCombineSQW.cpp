@@ -13,12 +13,12 @@
 #include <cxxtest/TestMain.h>
 
 bool suite_TestCombineSQW_init = false;
-#include "D:\Data\ExcitDev\ISIS_svn\Hor#160\_LowLevelCode\cpp\combine_sqw\TestCombineSQW\TestCombineSQW.h"
+#include "D:\users\abuts\SVN\ISIS\Hor#160\_LowLevelCode\cpp\combine_sqw\TestCombineSQW\TestCombineSQW.h"
 
 static TestCombineSQW* suite_TestCombineSQW = 0;
 
 static CxxTest::List Tests_TestCombineSQW = { 0, 0 };
-CxxTest::DynamicSuiteDescription< TestCombineSQW > suiteDescription_TestCombineSQW( "D:/Data/ExcitDev/ISIS_svn/Hor#160/_LowLevelCode/cpp/combine_sqw/TestCombineSQW/TestCombineSQW.h", 46, "TestCombineSQW", Tests_TestCombineSQW, suite_TestCombineSQW, 55, 58 );
+CxxTest::DynamicSuiteDescription< TestCombineSQW > suiteDescription_TestCombineSQW( "D:/users/abuts/SVN/ISIS/Hor#160/_LowLevelCode/cpp/combine_sqw/TestCombineSQW/TestCombineSQW.h", 46, "TestCombineSQW", Tests_TestCombineSQW, suite_TestCombineSQW, 55, 58 );
 
 static class TestDescription_suite_TestCombineSQW_test_read_nbins : public CxxTest::RealTestDescription {
 public:

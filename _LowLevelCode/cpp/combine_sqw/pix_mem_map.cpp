@@ -366,6 +366,7 @@ size_t pix_mem_map::_flatten_memory_map(const std::list<std::vector<bin_info> > 
 
     // Store changes
     if (pTargBuf != pSourceBuf) {
+        std::lock_guard<std::mutex> lock(this->bin_read_lock);
         this->nbin_buffer.swap(bin_mem_map);
     }
     this->num_first_buf_bin = first_bin_number;

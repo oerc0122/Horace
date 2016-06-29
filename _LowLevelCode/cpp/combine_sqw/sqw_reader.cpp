@@ -176,6 +176,7 @@ void sqw_reader::_update_cash(size_t bin_number, size_t pix_start_num, size_t nu
     size_t num_pix_in_buffer;
     if (this->use_multithreading_pix) {
         if (num_pix_to_read*PIX_SIZE > this->thread_pix_buffer.size()) {
+            std::lock_guard<std::mutex> read_lock(this->pix_read_lock);
             thread_pix_buffer.resize(num_pix_to_read*PIX_SIZE);
         }
         size_t first_thbuf_pix, last_thbuf_pix, n_thrbuf_pix;
@@ -190,6 +191,7 @@ void sqw_reader::_update_cash(size_t bin_number, size_t pix_start_num, size_t nu
             num_pix_in_buffer = num_pix_to_read;
         }else { // Cash missed. instruct thread to get next portion of data but read proper data piece manually.
             if (num_pix_in_bin*PIX_SIZE > pix_buffer.size()) {
+                std::lock_guard<std::mutex> read_lock(this->pix_read_lock);
                 pix_buffer.resize((num_pix_in_bin+1)*PIX_SIZE);
             }
             size_t next_pix_to_read = pix_start_num + num_pix_in_bin;
