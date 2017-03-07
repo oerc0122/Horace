@@ -23,18 +23,16 @@ addpath(rootpath)  % MUST have rootpath so that horace_init, horace_off included
 % Add admin functions to the path first
 addpath(fullfile(rootpath,'admin'));
 % add sqw immediately after dnd classes
-addpath_message (1,rootpath,'sqw');
+addpath_message (1,rootpath,'main_classes');
 addpath_message (1,rootpath,'algorithms');
 
 % Add support package
 addpath_message (1,rootpath,'herbert');
 
-% DLL and configuration setup
-addpath_message (2,rootpath,'DLL');
+% configuration setup
 addpath_message (1,rootpath,'configuration');
 
 % Other directories
-addpath_message (1,rootpath,'horace_function_utils');
 addpath_message (1,rootpath,'lattice_functions');
 addpath_message (1,rootpath,'utilities');
 
